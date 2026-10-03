@@ -1,0 +1,12 @@
+(footprint "L_8D43_220_ThegioiIC" (version 20240108) (generator "M9") (layer "F.Cu")
+(descr "Supplierdrawing3406:8x8x4.3(max4.5)shielded;landpads2x2.8 gap6.1;prototypeaccepted not manufacturerqualified")
+(attr smd)
+(property "Reference" "REF**" (at 0 -9) (layer "F.SilkS") (effects (font (size 1 1) (thickness 0.15))))
+(property "Value" "L_8D43_220_ThegioiIC" (at 0 9) (layer "F.Fab") (effects (font (size 1 1) (thickness 0.15))))
+(fp_rect (start -5.05 -4.3) (end 5.05 4.3) (stroke (width 0.1) (type solid)) (fill none) (layer "F.Fab"))
+(fp_rect (start -5.55 -4.8) (end 5.55 4.8) (stroke (width 0.05) (type solid)) (fill none) (layer "F.CrtYd"))
+(fp_rect (start -5.17 -4.42) (end 5.17 4.42) (stroke (width 0.12) (type solid)) (fill none) (layer "F.SilkS"))
+(pad "1" smd rect (at -4.05 0) (size 2 2.8) (layers "F.Cu" "F.Paste" "F.Mask"))
+(pad "2" smd rect (at 4.05 0) (size 2 2.8) (layers "F.Cu" "F.Paste" "F.Mask"))
+
+)

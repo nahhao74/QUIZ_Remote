@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "author": "quiz_remote",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 0, "left": 0, "attrs": {} },
+    { "type": "wokwi-74hc595", "id": "sr", "top": -120, "left": 200, "attrs": {} },
+    { "type": "wokwi-7segment", "id": "disp", "top": -260, "left": 190, "attrs": { "digits": "2", "common": "anode", "color": "red" } },
+    { "type": "wokwi-membrane-keypad", "id": "kp", "top": -60, "left": 380, "attrs": {} },
+    { "type": "wokwi-resistor", "id": "rs0", "top": 260, "left": 200, "attrs": { "value": "10000" } },
+    { "type": "wokwi-resistor", "id": "rs1", "top": 290, "left": 200, "attrs": { "value": "10000" } },
+    { "type": "wokwi-resistor", "id": "rs2", "top": 320, "left": 200, "attrs": { "value": "10000" } },
+    { "type": "wokwi-resistor", "id": "rs3", "top": 350, "left": 200, "attrs": { "value": "10000" } },
+    { "type": "wokwi-led", "id": "hold", "top": 60, "left": -120, "attrs": { "color": "green", "label": "PWR_HOLD" } }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+
+    [ "sr:VCC", "esp:3V3", "red", [] ],
+    [ "sr:MR", "esp:3V3", "red", [] ],
+    [ "sr:GND", "esp:GND.2", "black", [] ],
+    [ "esp:23", "sr:DS", "blue", [] ],
+    [ "esp:18", "sr:SHCP", "orange", [] ],
+    [ "esp:19", "sr:STCP", "yellow", [] ],
+    [ "esp:16", "sr:OE", "gray", [] ],
+
+    [ "sr:Q0", "disp:A", "green", [] ],
+    [ "sr:Q1", "disp:B", "green", [] ],
+    [ "sr:Q2", "disp:C", "green", [] ],
+    [ "sr:Q3", "disp:D", "green", [] ],
+    [ "sr:Q4", "disp:E", "green", [] ],
+    [ "sr:Q5", "disp:F", "green", [] ],
+    [ "sr:Q6", "disp:G", "green", [] ],
+    [ "sr:Q7", "disp:DP", "green", [] ],
+    [ "esp:17", "disp:DIG1", "purple", [] ],
+    [ "esp:4", "disp:DIG2", "purple", [] ],
+
+    [ "esp:25", "kp:R1", "cyan", [] ],
+    [ "esp:26", "kp:R2", "cyan", [] ],
+    [ "esp:27", "kp:R3", "cyan", [] ],
+    [ "esp:22", "kp:R4", "cyan", [] ],
+    [ "esp:32", "kp:C1", "magenta", [] ],
+    [ "esp:33", "kp:C2", "magenta", [] ],
+    [ "esp:34", "kp:C3", "magenta", [] ],
+    [ "esp:35", "kp:C4", "magenta", [] ],
+
+    [ "rs0:1", "esp:3V3", "red", [] ],
+    [ "rs1:1", "esp:3V3", "red", [] ],
+    [ "rs2:1", "esp:3V3", "red", [] ],
+    [ "rs3:1", "esp:3V3", "red", [] ],
+    [ "rs0:2", "kp:C1", "magenta", [] ],
+    [ "rs1:2", "kp:C2", "magenta", [] ],
+    [ "rs2:2", "kp:C3", "magenta", [] ],
+    [ "rs3:2", "kp:C4", "magenta", [] ],
+
+    [ "esp:13", "hold:A", "green", [] ],
+    [ "hold:C", "esp:GND.1", "black", [] ]
+  ],
+  "dependencies": {}
+}
