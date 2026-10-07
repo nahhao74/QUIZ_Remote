@@ -7,6 +7,7 @@ Stages (run in order):  place  ->  route  ->  finish
 
 """
 import json
+import math
 import os
 import subprocess
 import sys
@@ -23,6 +24,20 @@ PLACED = PRJ / 'route' / 'placed_unrouted.kicad_pcb'   # finish always starts fr
 # folder holding freerouting-*.jar and a jre25/ runtime; only the route stage needs it
 FREEROUTING = Path(os.environ.get('FREEROUTING_DIR', ROOT / 'quiz_remote/validation/M12/autorouter_eval/freerouting'))
 W, H, OX, OY = 52.0, 90.0, 100.0, 60.0          # board size and page offset, mm
+TITLE = 'Quiz remote compact 52x90'
+# signal track, clearance, via, drill, power track, power via, power drill (mm)
+RULES = (0.2, 0.2, 0.6, 0.3, 0.6, 0.9, 0.45)
+TP_FRONT = True                                   # side the test pads go on
+POUR_LAYERS = (pcb.F_Cu, pcb.B_Cu)
+ROUTE_ARGS = []
+UNTENT_VIAS = False                                # True leaves vias open in the solder mask
+GERBER_LAYERS = 'F.Cu,B.Cu,F.Mask,B.Mask,F.Paste,B.Paste,F.Silkscreen,B.Silkscreen,Edge.Cuts'
+# mounting holes, added after routing in the spots the copper left free: M2 here, the corners are full of keys
+HOLE, HOLES = 'MountingHole_2.2mm_M2', [(2.0, 9.75), (49.25, 10.5), (3.5, 78.05), (49.75, 78.05)]
+HOLE_COPPER_R = 2.2            # no copper at all within this radius of a hole centre (screw head 3.8 mm), so a screw cannot short anything
+HOLE_KEEPOUT_R = 2.1          # courtyard radius: M2 pan head (3.8 mm) plus 0.2 mm; the library's 2.45 mm does not fit between key rows
+ZONE_CONN = pcb.ZONE_CONNECTION_THT_THERMAL        # thermals on through-hole pins only
+TWEAK = None                                      # optional hook(board, footprints) run before the DSN export
 POWER = ['/VBAT_AON', '/VIN_BOOST', '/3V3_SW', '/GND', '/M1_BATTERY_MAIN_SWITCH/VBAT_RAW', '/M3_BOOST_3V3/SW_NODE']
 mm = pcb.FromMM
 pt = lambda x, y: pcb.VECTOR2I(mm(OX + x), mm(OY + y))
@@ -75,11 +90,18 @@ def layout():
     return P
 
 
-def tp_slots():
+def tp_slots(fps):
     """Free 1.5 mm test-pad spots on the front: between key rows and beside the displays."""
     slots = [(x, m) for m in BAND for x in [2.5 + 3.0 * i for i in range(16)] if min(abs(x - 13.3), abs(x - 38.7)) > 2.6]
     slots += [(x, y) for y in [3 + 3.2 * i for i in range(12)] for x in (2.5, 5.7, 8.9, 12.1, 39.9, 43.1, 46.3, 49.5)]
     return slots
+
+
+def check_sockets(fps):
+    # socket orientation is what makes the module fit: pin 1 on top, pin 15 near the bottom edge
+    for j in ('J1', 'J2'):
+        y = {p.GetNumber(): pcb.ToMM(p.GetPosition().y) - OY for p in fps[j].Pads()}
+        assert abs(y['1'] - 50.44) < 0.01 and abs(y['15'] - 86.0) < 0.01, (j, y['1'], y['15'])
 
 
 def place():
@@ -87,7 +109,7 @@ def place():
     b.SetCopperLayerCount(2)
     ds = b.GetDesignSettings()
     ds.SetBoardThickness(mm(1.6))
-    b.GetTitleBlock().SetTitle('Quiz remote compact 52x90')
+    b.GetTitleBlock().SetTitle(TITLE)
     xml = PRJ / 'route' / 'netlist.xml'
     xml.parent.mkdir(exist_ok=True)
     subprocess.run(['kicad-cli', 'sch', 'export', 'netlist', '--format', 'kicadxml', '-o', str(xml), str(PRJ / 'quiz_remote.kicad_sch')], check=True, capture_output=True)
@@ -141,40 +163,40 @@ def place():
     for ref, a in P.items():
         put(ref, *a)
     # test pads: each goes to the free front spot nearest the parts on its net
-    slots = tp_slots()
+    slots = tp_slots(fps)
     for ref in sorted(r for r in fps if r.startswith('TP')):
         net = fps[ref].Pads()[0].GetNetname()
         near = [P[m][:2] for m in members.get(net, []) if m in P] or [(W / 2, H / 2)]
         cx, cy = sum(p[0] for p in near) / len(near), sum(p[1] for p in near) / len(near)
         s = min(slots, key=lambda q: (q[0] - cx) ** 2 + (q[1] - cy) ** 2)
-        slots.remove(s); put(ref, s[0], s[1], 0, True); P[ref] = (*s, 0, True)
+        slots.remove(s); put(ref, s[0], s[1], 0, TP_FRONT); P[ref] = (*s, 0, TP_FRONT)
     missing = set(fps) - set(P)
     assert not missing, missing
-    # socket orientation is what makes the module fit: pin 1 on top, pin 15 near the bottom edge
-    for j in ('J1', 'J2'):
-        y = {p.GetNumber(): pcb.ToMM(p.GetPosition().y) - OY for p in fps[j].Pads()}
-        assert abs(y['1'] - 50.44) < 0.01 and abs(y['15'] - 86.0) < 0.01, (j, y['1'], y['15'])
+    check_sockets(fps)
     # outline
     for a, c in zip([(0, 0), (W, 0), (W, H), (0, H)], [(W, 0), (W, H), (0, H), (0, 0)]):
         s = pcb.PCB_SHAPE(b); s.SetShape(pcb.SHAPE_T_SEGMENT); s.SetLayer(pcb.Edge_Cuts)
         s.SetStart(pt(*a)); s.SetEnd(pt(*c)); s.SetWidth(mm(0.1)); b.Add(s)
     ns = ds.m_NetSettings
     dflt = ns.GetDefaultNetclass()
-    dflt.SetTrackWidth(mm(0.2)); dflt.SetClearance(mm(0.2)); dflt.SetViaDiameter(mm(0.6)); dflt.SetViaDrill(mm(0.3))
+    tw, cl, via, drill, ptw, pvia, pdrill = RULES
+    dflt.SetTrackWidth(mm(tw)); dflt.SetClearance(mm(cl)); dflt.SetViaDiameter(mm(via)); dflt.SetViaDrill(mm(drill))
     power = pcb.NETCLASS('Power')
-    power.SetTrackWidth(mm(0.6)); power.SetClearance(mm(0.2)); power.SetViaDiameter(mm(0.9)); power.SetViaDrill(mm(0.45))
+    power.SetTrackWidth(mm(ptw)); power.SetClearance(mm(cl)); power.SetViaDiameter(mm(pvia)); power.SetViaDrill(mm(pdrill))
     ns.SetNetclass('Power', power)
     for n in POWER:
         ns.SetNetclassPatternAssignment(n, 'Power')
     b.SynchronizeNetsAndNetClasses(True)
+    if TWEAK:
+        TWEAK(b, fps)
     assert pcb.ExportSpecctraDSN(b, str(DSN)), 'DSN export failed'
     pcb.SaveBoard(str(PLACED), b)
     pcb.SaveBoard(str(BOARD), b)
     # the project file keeps the same classes for the KiCad GUI
     pro = PRJ / 'quiz_remote.kicad_pro'
     d = json.loads(pro.read_text())
-    base = dict(d['net_settings']['classes'][0], track_width=0.2, clearance=0.2, via_diameter=0.6, via_drill=0.3)
-    d['net_settings']['classes'] = [base, dict(base, name='Power', track_width=0.6, via_diameter=0.9, via_drill=0.45, priority=0)]
+    base = dict(d['net_settings']['classes'][0], track_width=tw, clearance=cl, via_diameter=via, via_drill=drill)
+    d['net_settings']['classes'] = [base, dict(base, name='Power', track_width=ptw, via_diameter=pvia, via_drill=pdrill, priority=0)]
     d['net_settings']['netclass_patterns'] = [{'netclass': 'Power', 'pattern': n} for n in POWER]
     pro.write_text(json.dumps(d, indent=2) + '\n')
     print('placed', len(fps), 'footprints; DSN at', DSN)
@@ -184,7 +206,7 @@ def route(passes='60'):
     java = FREEROUTING / 'jre25' / 'bin' / 'java'
     jar = next(FREEROUTING.glob('freerouting-*.jar'))
     subprocess.run([str(java), '-Djava.awt.headless=true', '-jar', str(jar), '-de', str(DSN), '-do', str(SES), '-mp', passes,
-                    '--gui.enabled=false'], check=True, cwd=str(DSN.parent))
+                    '--gui.enabled=false', *ROUTE_ARGS], check=True, cwd=str(DSN.parent))
     assert SES.exists(), 'Freerouting produced no session file'
 
 
@@ -193,20 +215,40 @@ def finish():
     assert pcb.ImportSpecctraSES(b, str(SES)), 'SES import failed'
     pcb.SaveBoard(str(BOARD), b)
     # pours run in a fresh process: pcbnew crashes when the board is reloaded after a session import
-    subprocess.run([sys.executable, __file__, 'pour'], check=True)
+    subprocess.run([sys.executable, sys.argv[0], 'pour'], check=True)
 
 
 def pour():
     b = pcb.LoadBoard(str(BOARD))
     for t in b.GetTracks():
-        if not isinstance(t, pcb.PCB_VIA) and t.GetWidth() < mm(0.2):
-            t.SetWidth(mm(0.2))
-        if isinstance(t, pcb.PCB_VIA) and t.GetWidth(pcb.F_Cu) < mm(0.9):
-            t.SetDrill(mm(0.3))                         # the session sometimes pairs a small via with the large drill
+        if not isinstance(t, pcb.PCB_VIA) and t.GetWidth() < mm(RULES[0]):
+            t.SetWidth(mm(RULES[0]))
+        if isinstance(t, pcb.PCB_VIA) and t.GetWidth(pcb.F_Cu) < mm(RULES[5]):
+            t.SetDrill(mm(RULES[3]))                         # the session sometimes pairs a small via with the large drill
+    if UNTENT_VIAS:
+        for t in b.GetTracks():
+            if isinstance(t, pcb.PCB_VIA):
+                t.SetFrontTentingMode(pcb.TENTING_MODE_NOT_TENTED); t.SetBackTentingMode(pcb.TENTING_MODE_NOT_TENTED)
+    for i, (x, y) in enumerate(HOLES, 1):
+        f = pcb.FootprintLoad('/usr/share/kicad/footprints/MountingHole.pretty', HOLE)
+        f.SetFPID(pcb.LIB_ID('' if HOLE_KEEPOUT_R else 'MountingHole', HOLE)); f.SetReference(f'H{i}'); f.SetPosition(pt(x, y))   # a changed courtyard is no longer the library part
+        f.SetAttributes(pcb.FP_BOARD_ONLY | pcb.FP_EXCLUDE_FROM_BOM | pcb.FP_EXCLUDE_FROM_POS_FILES)
+        f.Reference().SetVisible(False); f.Value().SetVisible(False)
+        for g in f.GraphicalItems():
+            if HOLE_KEEPOUT_R and g.GetLayer() in (pcb.F_CrtYd, pcb.B_CrtYd):
+                g.SetEnd(g.GetCenter() + pcb.VECTOR2I(mm(HOLE_KEEPOUT_R), 0))
+        b.Add(f)
+        k = pcb.ZONE(b); k.SetIsRuleArea(True); k.SetLayerSet(pcb.LSET.AllCuMask()); k.SetZoneName(f'H{i} no copper')
+        k.SetDoNotAllowZoneFills(True); k.SetDoNotAllowTracks(True); k.SetDoNotAllowVias(True)
+        k.SetDoNotAllowPads(False); k.SetDoNotAllowFootprints(False)
+        o = k.Outline(); o.NewOutline()
+        for a in range(36):
+            o.Append(mm(OX + x + HOLE_COPPER_R * math.cos(a * math.pi / 18)), mm(OY + y + HOLE_COPPER_R * math.sin(a * math.pi / 18)))
+        b.Add(k)
     gnd = b.FindNet('/GND')
-    for layer in (pcb.F_Cu, pcb.B_Cu):
+    for layer in POUR_LAYERS:
         z = pcb.ZONE(b); z.SetLayer(layer); z.SetNet(gnd); z.SetZoneName('GND')
-        z.SetLocalClearance(mm(0.3)); z.SetMinThickness(mm(0.25)); z.SetPadConnection(pcb.ZONE_CONNECTION_THT_THERMAL)   # thermals on through-hole pins only
+        z.SetLocalClearance(mm(0.3)); z.SetMinThickness(mm(0.25)); z.SetPadConnection(ZONE_CONN)
         z.SetIslandRemovalMode(pcb.ISLAND_REMOVAL_MODE_ALWAYS)
         o = z.Outline(); o.NewOutline()
         for x, y in [(0, 0), (W, 0), (W, H), (0, H)]:
@@ -217,5 +259,20 @@ def pour():
     print('tracks+vias', len(b.GetTracks()))
 
 
+def gerber():
+    """Fabrication files: Gerbers and Excellon drills in <project>/gerber, plus a zip to upload to the board house."""
+    import shutil
+    out = PRJ / 'gerber'
+    shutil.rmtree(out, ignore_errors=True); out.mkdir()
+    subprocess.run(['kicad-cli', 'pcb', 'export', 'gerbers', '--layers', GERBER_LAYERS, '--subtract-soldermask', '-o', str(out) + '/', str(BOARD)], check=True, capture_output=True)
+    subprocess.run(['kicad-cli', 'pcb', 'export', 'drill', '--format', 'excellon', '--excellon-separate-th', '--generate-map', '--map-format', 'pdf',
+                    '-o', str(out) + '/', str(BOARD)], check=True, capture_output=True)
+    print(shutil.make_archive(str(PRJ / (PRJ.name + '_gerber')), 'zip', out))
+
+
+def main():
+    {'place': place, 'route': route, 'finish': finish, 'pour': pour, 'gerber': gerber}[sys.argv[1]](*sys.argv[2:])
+
+
 if __name__ == '__main__':
-    {'place': place, 'route': route, 'finish': finish, 'pour': pour}[sys.argv[1]](*sys.argv[2:])
+    main()

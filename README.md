@@ -68,7 +68,7 @@ Bước `route` cần Freerouting 2.4.1 (file `freerouting-*.jar` và thư mục
 ## Trước khi đặt mạch
 
 - Đo module ESP32 thật: board giả định hai hàng chân cách nhau 25,4 mm.
-- Board chưa có lỗ bắt vít và chưa có chữ in tên linh kiện.
+- Board có 4 lỗ bắt vít M2 (2,2 mm); chưa có chữ in tên linh kiện.
 - Dòng nghỉ, gợn nguồn khi phát sóng và thời lượng pin chưa được đo.
 
 Chi tiết ở mục 8 của [tài liệu thiết kế](docs/tai-lieu-thiet-ke-phan-cung.md).

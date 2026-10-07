@@ -1,0 +1,428 @@
+{
+    "$schema": "https://schemas.kicad.org/drc.v1.json",
+    "coordinate_units": "mm",
+    "date": "2026-10-06T22:10:38",
+    "ignored_checks": [
+        {
+            "description": "Footprint has no courtyard defined",
+            "key": "missing_courtyard"
+        },
+        {
+            "description": "Track endpoint not centered on via",
+            "key": "track_not_centered_on_via"
+        },
+        {
+            "description": "Tuning profile track geometries",
+            "key": "tuning_profile_track_geometries"
+        },
+        {
+            "description": "Footprint doesn't match symbol's footprint filters",
+            "key": "footprint_filters_mismatch"
+        },
+        {
+            "description": "Footprint component type doesn't match footprint pads",
+            "key": "footprint_type_mismatch"
+        }
+    ],
+    "included_severities": [
+        "error",
+        "warning"
+    ],
+    "kicad_version": "10.0.6",
+    "schematic_parity": [],
+    "source": "quiz_remote.kicad_pcb",
+    "unconnected_items": [],
+    "violations": [
+        {
+            "description": "Silkscreen clipped by solder mask",
+            "items": [
+                {
+                    "description": "Rectangle of CRES on F.Silkscreen",
+                    "pos": {
+                        "x": 126.505,
+                        "y": 111.505
+                    },
+                    "uuid": "b88bf521-48ba-4bc5-86ac-b2e31af5a1c7"
+                },
+                {
+                    "description": "Via [/M5_KEYPAD_4X4/ROW1] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 127.0733,
+                        "y": 119.1476
+                    },
+                    "uuid": "5780c773-c823-4ee7-a4c4-f117f8040d9e"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_over_copper"
+        },
+        {
+            "description": "Silkscreen clipped by solder mask",
+            "items": [
+                {
+                    "description": "Rectangle of CRES on F.Silkscreen",
+                    "pos": {
+                        "x": 126.505,
+                        "y": 111.505
+                    },
+                    "uuid": "b88bf521-48ba-4bc5-86ac-b2e31af5a1c7"
+                },
+                {
+                    "description": "Via [/HC595_CLK] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 125.969,
+                        "y": 113.5369
+                    },
+                    "uuid": "12123a99-b985-428e-8ceb-c7a35aba1c23"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_over_copper"
+        },
+        {
+            "description": "Silkscreen clipped by solder mask",
+            "items": [
+                {
+                    "description": "Rectangle of CRES on F.Silkscreen",
+                    "pos": {
+                        "x": 126.505,
+                        "y": 111.505
+                    },
+                    "uuid": "b88bf521-48ba-4bc5-86ac-b2e31af5a1c7"
+                },
+                {
+                    "description": "Via [/M5_KEYPAD_4X4/ROW1] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 131.9686,
+                        "y": 119.1476
+                    },
+                    "uuid": "8ae2abcf-e0fa-42a9-b2b2-210e62ae00c6"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_over_copper"
+        },
+        {
+            "description": "Silkscreen clipped by solder mask",
+            "items": [
+                {
+                    "description": "Segment of QROW1 on B.Silkscreen",
+                    "pos": {
+                        "x": 121.74,
+                        "y": 124.685
+                    },
+                    "uuid": "4b01fa9f-9bf7-47d9-8fae-9be0e5829edf"
+                },
+                {
+                    "description": "Via [/ROW0_CTL] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 123.3651,
+                        "y": 124.8038
+                    },
+                    "uuid": "0d07ab88-534c-4e3e-9059-acb9b3bfa86b"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_over_copper"
+        },
+        {
+            "description": "Silkscreen clipped by solder mask",
+            "items": [
+                {
+                    "description": "Segment of QROW1 on B.Silkscreen",
+                    "pos": {
+                        "x": 123.26,
+                        "y": 124.685
+                    },
+                    "uuid": "2ee61041-b683-436a-b3f6-14aa3d570f8c"
+                },
+                {
+                    "description": "Via [/ROW0_CTL] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 123.3651,
+                        "y": 124.8038
+                    },
+                    "uuid": "0d07ab88-534c-4e3e-9059-acb9b3bfa86b"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_over_copper"
+        },
+        {
+            "description": "Silkscreen clipped by solder mask",
+            "items": [
+                {
+                    "description": "Segment of QCOL1 on B.Silkscreen",
+                    "pos": {
+                        "x": 127.01,
+                        "y": 129.19
+                    },
+                    "uuid": "d43586c2-2851-4b84-8aec-b7c8ffff94f6"
+                },
+                {
+                    "description": "Via [/COL1_ADC] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 127.4012,
+                        "y": 129.6454
+                    },
+                    "uuid": "7f6c4833-2dc0-470f-9388-982e2d7e5caf"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_over_copper"
+        },
+        {
+            "description": "Silkscreen clipped by solder mask",
+            "items": [
+                {
+                    "description": "Segment of QCOL1 on B.Silkscreen",
+                    "pos": {
+                        "x": 127.01,
+                        "y": 130.19
+                    },
+                    "uuid": "74d31526-046c-4f64-97b1-5608cac51bd9"
+                },
+                {
+                    "description": "Via [/COL1_ADC] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 127.4012,
+                        "y": 129.6454
+                    },
+                    "uuid": "7f6c4833-2dc0-470f-9388-982e2d7e5caf"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_over_copper"
+        },
+        {
+            "description": "Silkscreen clipped by solder mask",
+            "items": [
+                {
+                    "description": "Circle of TP_COL2_SENSE on B.Silkscreen",
+                    "pos": {
+                        "x": 154.0,
+                        "y": 124.9
+                    },
+                    "uuid": "fe9741d2-27bf-4338-a2f3-5a7c661f2c2b"
+                },
+                {
+                    "description": "Via [/GND] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 154.0998,
+                        "y": 126.4544
+                    },
+                    "uuid": "b72f19ac-c8a4-46c5-96a9-4897db778b26"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_over_copper"
+        },
+        {
+            "description": "Silkscreen clipped by solder mask",
+            "items": [
+                {
+                    "description": "Segment of DWAKE0 on B.Silkscreen",
+                    "pos": {
+                        "x": 114.015,
+                        "y": 128.125
+                    },
+                    "uuid": "5e68215e-8a6e-4709-8c1e-c16fb6511639"
+                },
+                {
+                    "description": "Via [/WAKE_NODE] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 115.2938,
+                        "y": 127.6977
+                    },
+                    "uuid": "9edd58b5-322a-4c42-913b-1f4ce4a64f51"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_over_copper"
+        },
+        {
+            "description": "Silkscreen clipped by solder mask",
+            "items": [
+                {
+                    "description": "Segment of DWAKE2 on B.Silkscreen",
+                    "pos": {
+                        "x": 145.765,
+                        "y": 130.125
+                    },
+                    "uuid": "efaf0c22-3c13-415f-83b6-061f0e53ff4b"
+                },
+                {
+                    "description": "Via [/WAKE_NODE] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 145.3691,
+                        "y": 130.143
+                    },
+                    "uuid": "212501a8-179c-4482-99fd-3a395e1c5291"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_over_copper"
+        },
+        {
+            "description": "Silkscreen clipped by solder mask",
+            "items": [
+                {
+                    "description": "Segment of DWAKE2 on B.Silkscreen",
+                    "pos": {
+                        "x": 145.765,
+                        "y": 130.125
+                    },
+                    "uuid": "171cd171-b944-4f6c-ba49-e60262995677"
+                },
+                {
+                    "description": "Via [/WAKE_NODE] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 145.3691,
+                        "y": 130.143
+                    },
+                    "uuid": "212501a8-179c-4482-99fd-3a395e1c5291"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_over_copper"
+        },
+        {
+            "description": "Silkscreen clipped by solder mask",
+            "items": [
+                {
+                    "description": "Circle of TP_PWR_GATE on B.Silkscreen",
+                    "pos": {
+                        "x": 151.4,
+                        "y": 85.9
+                    },
+                    "uuid": "4704a54d-c361-4b3e-91a8-2d4de7247439"
+                },
+                {
+                    "description": "Via [/M2_POWER_GATE_WAKE_HOLD/PWR_GATE] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 152.5291,
+                        "y": 86.9688
+                    },
+                    "uuid": "4f698169-b37d-4eaf-baaf-9e95fad19130"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_over_copper"
+        },
+        {
+            "description": "Silkscreen clipped by solder mask",
+            "items": [
+                {
+                    "description": "Rectangle of L1 on B.Silkscreen",
+                    "pos": {
+                        "x": 148.855,
+                        "y": 88.22
+                    },
+                    "uuid": "8ddc226a-c9c8-4bc4-abef-18557a4863ff"
+                },
+                {
+                    "description": "Via [/M3_BOOST_3V3/FB_NODE] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 155.8164,
+                        "y": 98.8232
+                    },
+                    "uuid": "42972b1c-d623-4970-91ef-eca40cb5a4be"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_over_copper"
+        },
+        {
+            "description": "Silkscreen clipped by solder mask",
+            "items": [
+                {
+                    "description": "Polygon of U1 on B.Silkscreen",
+                    "pos": {
+                        "x": 151.765,
+                        "y": 100.74
+                    },
+                    "uuid": "13525a1e-b069-4695-b4b9-e1481aff1857"
+                },
+                {
+                    "description": "Via [/VIN_BOOST] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 150.9658,
+                        "y": 100.653
+                    },
+                    "uuid": "b63ecec2-260b-483b-8a50-b115d72ff52e"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_over_copper"
+        },
+        {
+            "description": "Silkscreen clipped by solder mask",
+            "items": [
+                {
+                    "description": "Segment of DBOOST on B.Silkscreen",
+                    "pos": {
+                        "x": 157.685,
+                        "y": 104.94
+                    },
+                    "uuid": "0aecd6dd-07ce-4d45-844c-1cdab85d55a1"
+                },
+                {
+                    "description": "Via [/VIN_BOOST] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 152.7876,
+                        "y": 104.8862
+                    },
+                    "uuid": "d853ecdf-1fcb-491d-9db9-25359d703541"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_over_copper"
+        },
+        {
+            "description": "Silkscreen clipped by solder mask",
+            "items": [
+                {
+                    "description": "Segment of U2 on B.Silkscreen",
+                    "pos": {
+                        "x": 119.56,
+                        "y": 101.815
+                    },
+                    "uuid": "bbc1122d-631b-4da7-b9db-e3a9228c362f"
+                },
+                {
+                    "description": "Via [/M6_DISPLAY_2DIGIT/SEGDRV_G] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 116.9093,
+                        "y": 101.2473
+                    },
+                    "uuid": "7f425cb3-8b24-43b0-8a9e-6a6f56b2278a"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_over_copper"
+        },
+        {
+            "description": "Silkscreen clipped by solder mask",
+            "items": [
+                {
+                    "description": "Circle of TP_DIGIT1_CTL on B.Silkscreen",
+                    "pos": {
+                        "x": 112.4,
+                        "y": 109.3
+                    },
+                    "uuid": "3dea7871-be07-4800-bfe3-dafd3fefcaa6"
+                },
+                {
+                    "description": "Via [/DIGIT1_CTL] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 111.0358,
+                        "y": 108.4557
+                    },
+                    "uuid": "4bbc0b3c-b278-4827-b4ad-c9e5e134e907"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_over_copper"
+        }
+    ]
+}

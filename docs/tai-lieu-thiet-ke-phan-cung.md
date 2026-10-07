@@ -162,7 +162,7 @@ Chương trình mẫu theo đúng bảng chân này nằm ở `tools/wokwi_sim/w
 
 Board được tạo bằng script, không vẽ tay: vị trí linh kiện ghi trong `tools/build_compact_pcb.py`, đi dây bằng Freerouting, sau đó đổ đồng GND. Nút chuyển mạch của mạch tăng áp (`SW_NODE`) dài 17,3 mm và đi qua 2 via.
 
-Board chưa có chữ in tên linh kiện và chưa có lỗ bắt vít.
+Board có 4 lỗ bắt vít M2 (đường kính 2,2 mm): hai lỗ ở hai mép trên, hai lỗ ở hai mép bên giữa hàng phím thứ ba và thứ tư. Board chưa có chữ in tên linh kiện.
 
 ## 6. Danh mục linh kiện (BOM)
 
@@ -281,7 +281,7 @@ Trước khi đặt mạch:
 
 1. Đo module ESP32 thật: khoảng cách hai hàng chân (board giả định 25,4 mm) và vị trí chân so với mép module.
 2. Kiểm tra chiều gạt của SW_MAIN trên board so với vỏ hộp.
-3. Thêm lỗ bắt vít và chữ in tên linh kiện nếu cần.
+3. Thêm chữ in tên linh kiện nếu cần.
 
 Sau khi lắp, các phép đo còn mở:
 
