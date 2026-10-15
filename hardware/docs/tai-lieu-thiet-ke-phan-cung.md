@@ -2,9 +2,9 @@
 
 | | |
 |---|---|
-| Phiên bản | 1.0 |
-| Ngày | 2026-10-03 |
-| Phạm vi | Schematic và PCB trong `quiz_remote_compact/` |
+| Phiên bản | 1.1 |
+| Ngày | 2026-10-15 |
+| Phạm vi | Schematic và PCB trong `hardware/compact/` |
 | Trạng thái | Đã qua kiểm tra ERC, DRC và mô phỏng; **chưa lắp và đo trên mạch thật** |
 
 ## Mục lục
@@ -34,7 +34,7 @@ Quiz Remote là bộ bấm trả lời cầm tay: người dùng bấm một tro
 | Nguồn 3,3 V | Mạch tăng áp MT3608, đặt 3,37 V |
 | Dòng khi nghỉ | Thiết kế để chỉ còn dòng rò (toàn bộ mạch bị cắt nguồn); chưa đo |
 | Mạch in | 52 × 90 mm, 2 lớp |
-| Linh kiện | 91 linh kiện phải mua và 36 pad đo |
+| Linh kiện | 92 ký hiệu trong schematic (kể cả khay pin và hai đầu cắm), 36 pad đo |
 
 Yêu cầu thiết kế chính là **không tiêu dòng khi không dùng**: không có IC nào được cấp nguồn lúc nghỉ, kể cả ESP32. Chính phím bấm cấp nguồn cho mạch.
 
@@ -89,8 +89,8 @@ Tên khối trùng tên trang schematic.
 Tính toán:
 
 - **Thời gian giữ sau khi nhả:** τ = R_GATE × C_GATE = 220 kΩ × 4,7 µF ≈ 1,03 s. QPWR còn dẫn cho tới khi |VGS| tụt xuống dưới ngưỡng mở (tối đa 1,3 V theo datasheet AO3401A).
-- **Dòng cực B của QWAKE khi bấm (pin 3,0 V):** khoảng (3,0 − 0,6 − 0,65) V / (22 kΩ + 100 kΩ) ≈ 14 µA. QWAKE chỉ cần dẫn khoảng 3,0 V / 220 kΩ ≈ 14 µA để giữ `PWR_GATE` thấp, và phải xả C_GATE lúc đầu; kết quả mô phỏng ở mục 7 cho thấy 3,3 V lên sau 5–7 ms.
-- **Dòng cực B của QHOLD:** (3,37 − 0,65) V / 10 kΩ ≈ 0,27 mA, dư nhiều so với dòng cực C cần thiết.
+- **Dòng cực B của QWAKE khi bấm (pin 3,0 V):** khoảng (3,0 - 0,6 - 0,65) V / (22 kΩ + 100 kΩ) ≈ 14 µA. QWAKE chỉ cần dẫn khoảng 3,0 V / 220 kΩ ≈ 14 µA để giữ `PWR_GATE` thấp, và phải xả C_GATE lúc đầu; kết quả mô phỏng ở mục 7 cho thấy 3,3 V lên sau 5–7 ms.
+- **Dòng cực B của QHOLD:** (3,37 - 0,65) V / 10 kΩ ≈ 0,27 mA, dư nhiều so với dòng cực C cần thiết.
 - **R_HOLD_PD** giữ QHOLD tắt khi chân GPIO13 còn thả nổi lúc ESP32 chưa chạy.
 
 ### 3.3. M3 — Tăng áp 3,3 V
@@ -121,7 +121,7 @@ Mạch chỉ nhận đúng khi bấm một phím một lúc.
 
 74HC595 (U2) điều khiển tám thanh A–G và DP qua RSEG 470 Ω; đầu ra QA…QH ứng với A…G, DP. Hai MOSFET kênh P QDIG1, QDIG2 (AO3401A) cấp `3V3_SW` cho chân dương chung của từng số; cực G nối thẳng vào GPIO17 và GPIO4, có RGP 4,7 kΩ kéo lên để cả hai số tắt khi ESP32 chưa điều khiển.
 
-- **Dòng mỗi thanh:** khoảng (3,37 − 1,9) V / 470 Ω ≈ 3 mA khi sáng; quét hai số nên trung bình khoảng 1,5 mA mỗi thanh. Giá trị 1,9 V là điện áp rơi điển hình của LED đỏ, chưa đo trên LED thật.
+- **Dòng mỗi thanh:** khoảng (3,37 - 1,9) V / 470 Ω ≈ 3 mA khi sáng; quét hai số nên trung bình khoảng 1,5 mA mỗi thanh. Giá trị 1,9 V là điện áp rơi điển hình của LED đỏ, chưa đo trên LED thật.
 - **Trạng thái lúc cấp nguồn:** ROE 10 kΩ kéo chân OE lên (đầu ra bị khoá); RDATA_PD, RCLK_PD, RLATCH_PD 10 kΩ kéo các đường điều khiển xuống. Chân SRCLR nối thẳng `3V3_SW`.
 
 ## 4. Bảng chân ESP32 và quy ước cho firmware
@@ -145,7 +145,7 @@ Yêu cầu với firmware:
 2. Quét phím ngay sau khi khởi động, khi người dùng còn giữ phím. Nếu phím đã nhả trước khi quét thì mạch vẫn thức nhưng không biết phím nào đã bấm.
 3. Khi tắt: tắt hiển thị, hạ `PWR_HOLD`, rồi gọi ngủ sâu để ESP32 không chạy lại trong lúc nguồn đang tụt.
 
-Chương trình mẫu theo đúng bảng chân này nằm ở `tools/wokwi_sim/wokwi_sim.ino`.
+Chương trình mẫu theo đúng bảng chân này nằm ở `hardware/tools/wokwi_sim/wokwi_sim.ino`.
 
 ## 5. Mạch in
 
@@ -160,13 +160,20 @@ Chương trình mẫu theo đúng bảng chân này nằm ở `tools/wokwi_sim/w
 | Số via | 103 |
 | Khoảng cách phím | 12,7 mm |
 
-Board được tạo bằng script, không vẽ tay: vị trí linh kiện ghi trong `tools/build_compact_pcb.py`, đi dây bằng Freerouting, sau đó đổ đồng GND. Nút chuyển mạch của mạch tăng áp (`SW_NODE`) dài 17,3 mm và đi qua 2 via.
+Board được tạo bằng script, không vẽ tay: vị trí linh kiện ghi trong `hardware/tools/build_compact_pcb.py`, đi dây bằng Freerouting, sau đó đổ đồng GND. Nút chuyển mạch của mạch tăng áp (`SW_NODE`) dài 17,3 mm và đi qua 2 via.
 
 Board có 4 lỗ bắt vít M2 (đường kính 2,2 mm): hai lỗ ở hai mép trên, hai lỗ ở hai mép bên giữa hàng phím thứ ba và thứ tư. Board chưa có chữ in tên linh kiện.
+
+![Mặt trước mạch in](../compact/exports/pcb-front.png)
+![Mặt sau mạch in](../compact/exports/pcb-back.png)
+
+Ảnh PDF cùng tên nằm trong `hardware/compact/exports/`. Sơ đồ từng sheet nằm trong `hardware/schematic/`.
 
 ## 6. Danh mục linh kiện (BOM)
 
 Tồn kho và giá đọc từ trang ThegioiIC và LinhKienX ngày 2026-10-03; cả hai thay đổi theo ngày, cần mở link kiểm tra lại trước khi đặt. Cột "SL dùng" là cho một board; cột "Nên mua" đã tính số lượng bán tối thiểu của shop và vài con dự phòng.
+
+Số lượng từng ref được đối chiếu với netlist xuất từ schematic ngày 2026-10-15; danh sách đầy đủ dạng bảng nằm ở `hardware/compact/bom.csv`. Các ref có dấu `?` là linh kiện đặt tên không đánh số (ví dụ `C_GATE`), chưa đổi tên trên schematic.
 
 ### 6.1. Module, IC và bán dẫn
 
@@ -254,12 +261,12 @@ Tất cả các mục dưới đây là kiểm tra trên máy tính. Chưa có p
 
 | Kiểm tra | Lệnh | Kết quả |
 |---|---|---|
-| ERC schematic | `kicad-cli sch erc quiz_remote_compact/quiz_remote.kicad_sch` | 0 lỗi |
-| DRC mạch in, có đối chiếu schematic | `kicad-cli pcb drc --schematic-parity quiz_remote_compact/quiz_remote.kicad_pcb` | 0 vi phạm, 0 dây chưa nối, 0 sai lệch với schematic |
+| ERC schematic | `kicad-cli sch erc hardware/compact/quiz_remote.kicad_sch` | 0 lỗi |
+| DRC mạch in, có đối chiếu schematic | `kicad-cli pcb drc --schematic-parity hardware/compact/quiz_remote.kicad_pcb` | 0 vi phạm, 0 dây chưa nối, 0 sai lệch với schematic |
 
 ### 7.2. Mô phỏng mạch đánh thức và tự giữ
 
-Lệnh: `python3 tools/sim_wake_hold.py` (dùng thư viện ngspice đi kèm KiCad). Mạch tăng áp và ESP32 được thay bằng mô hình hành vi; transistor dùng mô hình chung.
+Lệnh: `python3 hardware/tools/sim_wake_hold.py` (dùng thư viện ngspice đi kèm KiCad). Mạch tăng áp và ESP32 được thay bằng mô hình hành vi; transistor dùng mô hình chung.
 
 | Pin | Giữ phím | ESP32 khởi động | Giữ được nguồn | \|VGS\| nhỏ nhất của QPWR | Tắt sau khi hạ `PWR_HOLD` |
 |---|---|---|---|---|---|
@@ -273,7 +280,7 @@ Trong mọi trường hợp, `3V3_SW` lên sau 5–7 ms kể từ lúc bấm và
 
 ### 7.3. Mô phỏng chương trình
 
-Thư mục `tools/wokwi_sim/` chứa chương trình và sơ đồ để chạy trên wokwi.com. Mô phỏng này chỉ kiểm tra logic quét phím và hiển thị. Nó không có mạch nguồn tự giữ, và chân chọn số được nối thẳng nên có cực tính ngược với board thật (đổi bằng `#define WOKWI`).
+Thư mục `hardware/tools/wokwi_sim/` chứa chương trình và sơ đồ để chạy trên wokwi.com. Mô phỏng này chỉ kiểm tra logic quét phím và hiển thị. Nó không có mạch nguồn tự giữ, và chân chọn số được nối thẳng nên có cực tính ngược với board thật (đổi bằng `#define WOKWI`).
 
 ## 8. Việc phải làm trước và sau khi đặt mạch
 
@@ -299,3 +306,4 @@ Sau khi lắp, các phép đo còn mở:
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
 | 1.0 | 2026-10-03 | Bản đầu tiên cho board 52 × 90 mm. Gộp tài liệu nguyên lý, tính toán và BOM vào một tài liệu. So với các bản nháp trước: hiển thị còn hai số với một 74HC595, chân chọn số điều khiển trực tiếp MOSFET (thấp = sáng), điện trở thanh LED 470 Ω, cầu phân áp 180 kΩ / 39 kΩ. |
+| 1.1 | 2026-10-15 | Chuyển tài liệu và mạch vào thư mục `hardware/`. Thêm ảnh mặt trước, mặt sau và sơ đồ từng sheet; BOM đối chiếu với netlist và có file CSV. Nội dung mạch không đổi. |

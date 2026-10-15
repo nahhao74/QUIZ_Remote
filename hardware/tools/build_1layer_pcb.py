@@ -1,4 +1,4 @@
-"""Build the single-sided board in quiz_remote_1layer/ from its schematic.
+"""Build the single-sided board in single-layer/ from its schematic.
 
 Stages (run in order):  place  ->  route  ->  finish     (same machinery as build_compact_pcb.py)
 
@@ -14,7 +14,7 @@ import pcbnew as pcb
 
 import build_compact_pcb as B
 
-B.PRJ = B.ROOT / 'quiz_remote_1layer'
+B.PRJ = B.ROOT / 'single-layer'
 B.BOARD = B.PRJ / 'quiz_remote.kicad_pcb'
 B.DSN, B.SES = B.PRJ / 'route' / 'quiz_remote.dsn', B.PRJ / 'route' / 'quiz_remote.ses'
 B.PLACED = B.PRJ / 'route' / 'placed_unrouted.kicad_pcb'
@@ -221,4 +221,4 @@ def jumpers():
 
 
 if __name__ == '__main__':
-    {'place': place, 'route': route, 'finish': finish, 'pour': B.pour, 'jumpers': jumpers, 'gerber': B.gerber}[sys.argv[1]](*sys.argv[2:])
+    {'place': place, 'route': route, 'finish': finish, 'pour': B.pour, 'jumpers': jumpers, 'gerber': B.gerber, 'solder': B.solder}[sys.argv[1]](*sys.argv[2:])
