@@ -1,0 +1,79 @@
+.import-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 16px;
+  margin-bottom: 18px;
+  border: 1px solid #cfe7d7;
+  border-radius: 8px;
+  background: #eff9f2;
+  color: #33765a;
+  font-size: 12px;
+}
+
+.txt-format-help {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 15px 16px;
+  border: 1px dashed #cddfd3;
+  border-radius: 9px;
+  background: #f7faf8;
+  color: #6d877a;
+}
+
+.txt-format-help > div {
+  flex: 1;
+}
+
+.txt-format-help strong,
+.txt-format-help span {
+  display: block;
+}
+
+.txt-format-help strong {
+  margin-bottom: 5px;
+  color: #3f6155;
+  font-size: 11px;
+}
+
+.txt-format-help span {
+  font-size: 9px;
+  line-height: 1.7;
+}
+
+.txt-format-help .text-button {
+  white-space: nowrap;
+  font-size: 10px;
+}
+
+.participants-panel .panel-heading .csv-export {
+  margin-left: auto;
+}
+
+.csv-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.csv-export .text-button {
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.csv-export small {
+  color: #b45b52;
+  font-size: 8px;
+}
+
+@media (max-width: 760px) {
+  .txt-format-help {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .txt-format-help .text-button {
+    margin-left: 33px;
+  }
+}

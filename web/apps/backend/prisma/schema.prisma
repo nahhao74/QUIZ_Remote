@@ -1,0 +1,342 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+enum SessionStatus {
+  LOBBY
+  QUESTION_ACTIVE
+  QUESTION_CLOSED
+  FINISHED
+}
+enum SessionMode {
+  MANUAL
+  TIMER
+}
+enum QuestionType {
+  SINGLE
+  MULTIPLE
+}
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+enum QuestionOrigin {
+  MANUAL
+  IMPORT
+  AI
+}
+enum AiJobKind {
+  GENERATE_QUESTIONS
+  EXTRACT_QUESTIONS
+  REVIEW_QUIZ
+  ANALYZE_SESSION
+  ANALYZE_EXAM
+}
+enum AiJobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+model Teacher {
+  id String @id @default(uuid()) @db.Uuid
+  email String @unique
+  name String
+  passwordHash String
+  createdAt DateTime @default(now())
+  refreshTokens RefreshToken[]
+  quizzes Quiz[]
+  sessions QuizSession[]
+  documents SourceDocument[]
+  aiJobs AiJob[]
+  classrooms Classroom[]
+  exams Exam[]
+}
+model RefreshToken {
+  id String @id @default(uuid()) @db.Uuid
+  tokenHash String @unique
+  familyId String @db.Uuid
+  teacherId String @db.Uuid
+  teacher Teacher @relation(fields: [teacherId], references: [id])
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([familyId])
+}
+model Quiz {
+  id String @id @default(uuid()) @db.Uuid
+  teacherId String @db.Uuid
+  teacher Teacher @relation(fields: [teacherId], references: [id])
+  title String
+  description String @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  questions Question[]
+  sessions QuizSession[]
+  exams Exam[]
+  @@index([teacherId, deletedAt])
+}
+/// correctAnswer is a canonical key such as "B" or "AC" (CHECK constraint in the migration).
+model Question {
+  id String @id @default(uuid()) @db.Uuid
+  quizId String @db.Uuid
+  quiz Quiz @relation(fields: [quizId], references: [id])
+  content String
+  optionA String
+  optionB String
+  optionC String
+  optionD String
+  type QuestionType @default(SINGLE)
+  correctAnswer String
+  explanation String @default("")
+  knowledge String @default("")
+  topic String @default("")
+  difficulty Difficulty?
+  origin QuestionOrigin @default(MANUAL)
+  durationSeconds Int @default(30)
+  order Int
+  deletedAt DateTime?
+  @@index([quizId, order])
+}
+model QuizSession {
+  id String @id @default(uuid()) @db.Uuid
+  teacherId String @db.Uuid
+  teacher Teacher @relation(fields: [teacherId], references: [id])
+  quizId String @db.Uuid
+  quiz Quiz @relation(fields: [quizId], references: [id])
+  classroomId String? @db.Uuid
+  classroom Classroom? @relation(fields: [classroomId], references: [id])
+  examId String? @db.Uuid
+  exam Exam? @relation(fields: [examId], references: [id])
+  variantCode String?
+  title String
+  roomCode String
+  status SessionStatus @default(LOBBY)
+  mode SessionMode @default(MANUAL)
+  durationSeconds Int?
+  currentQuestionIndex Int @default(-1)
+  questionStartedAt DateTime?
+  questionEndsAt DateTime?
+  nextQuestionAt DateTime?
+  createdAt DateTime @default(now())
+  finishedAt DateTime?
+  questions SessionQuestion[]
+  participants SessionParticipant[]
+  @@index([teacherId, createdAt])
+  @@index([roomCode, status])
+  @@index([classroomId])
+  @@index([examId])
+}
+/// Snapshot shown in the session. optionOrder maps display positions to source options, e.g. "CADB".
+model SessionQuestion {
+  id String @id @default(uuid()) @db.Uuid
+  sessionId String @db.Uuid
+  session QuizSession @relation(fields: [sessionId], references: [id])
+  sourceQuestionId String @db.Uuid
+  content String
+  optionA String
+  optionB String
+  optionC String
+  optionD String
+  type QuestionType @default(SINGLE)
+  correctAnswer String
+  explanation String @default("")
+  knowledge String @default("")
+  topic String @default("")
+  difficulty Difficulty?
+  optionOrder String @default("ABCD")
+  durationSeconds Int
+  order Int
+  openedAt DateTime?
+  closedAt DateTime?
+  answers Answer[]
+  @@unique([sessionId, order])
+}
+model Device {
+  id String @id
+  online Boolean @default(true)
+  lastSeenAt DateTime @default(now())
+  participants SessionParticipant[]
+}
+model SessionParticipant {
+  id String @id @default(uuid()) @db.Uuid
+  sessionId String @db.Uuid
+  session QuizSession @relation(fields: [sessionId], references: [id])
+  deviceId String
+  device Device @relation(fields: [deviceId], references: [id])
+  studentCode String
+  joinedAt DateTime @default(now())
+  answers Answer[]
+  @@unique([sessionId, deviceId])
+  @@unique([sessionId, studentCode])
+}
+model Answer {
+  id String @id @default(uuid()) @db.Uuid
+  participantId String @db.Uuid
+  participant SessionParticipant @relation(fields: [participantId], references: [id])
+  questionId String @db.Uuid
+  question SessionQuestion @relation(fields: [questionId], references: [id])
+  answer String
+  sequence Int
+  clientTimestamp DateTime
+  serverTimestamp DateTime @default(now())
+  @@unique([participantId, questionId])
+  @@index([questionId])
+}
+model ProcessedMqttMessage {
+  requestId String @id @db.Uuid
+  deviceId String
+  action String
+  payloadHash String
+  ack Json
+  processedAt DateTime @default(now())
+  @@index([processedAt])
+}
+/// Teaching material uploaded for AI question generation. `data` keeps scanned PDFs that have no text layer.
+model SourceDocument {
+  id String @id @default(uuid()) @db.Uuid
+  teacherId String @db.Uuid
+  teacher Teacher @relation(fields: [teacherId], references: [id])
+  filename String
+  mimeType String
+  size Int
+  pageCount Int?
+  text String
+  sections Json
+  data Bytes?
+  createdAt DateTime @default(now())
+  deletedAt DateTime?
+  @@index([teacherId, deletedAt])
+}
+model AiJob {
+  id String @id @default(uuid()) @db.Uuid
+  teacherId String @db.Uuid
+  teacher Teacher @relation(fields: [teacherId], references: [id])
+  kind AiJobKind
+  status AiJobStatus @default(QUEUED)
+  documentId String? @db.Uuid
+  quizId String? @db.Uuid
+  sessionId String? @db.Uuid
+  examId String? @db.Uuid
+  input Json
+  result Json?
+  error String?
+  progress Int @default(0)
+  model String @default("")
+  inputTokens Int @default(0)
+  outputTokens Int @default(0)
+  createdAt DateTime @default(now())
+  startedAt DateTime?
+  finishedAt DateTime?
+  generated GeneratedQuestion[]
+  @@index([teacherId, kind, createdAt])
+  @@index([status])
+}
+/// AI proposals wait here until a teacher approves them into a quiz.
+model GeneratedQuestion {
+  id String @id @default(uuid()) @db.Uuid
+  jobId String @db.Uuid
+  job AiJob @relation(fields: [jobId], references: [id])
+  teacherId String @db.Uuid
+  content String
+  optionA String
+  optionB String
+  optionC String
+  optionD String
+  type QuestionType @default(SINGLE)
+  correctAnswer String
+  explanation String @default("")
+  knowledge String @default("")
+  topic String @default("")
+  difficulty Difficulty?
+  sourceExcerpt String @default("")
+  status ReviewStatus @default(PENDING)
+  quizId String? @db.Uuid
+  questionId String? @db.Uuid
+  order Int
+  createdAt DateTime @default(now())
+  reviewedAt DateTime?
+  @@index([teacherId, status, createdAt])
+  @@index([jobId])
+}
+model Classroom {
+  id String @id @default(uuid()) @db.Uuid
+  teacherId String @db.Uuid
+  teacher Teacher @relation(fields: [teacherId], references: [id])
+  name String
+  description String @default("")
+  createdAt DateTime @default(now())
+  deletedAt DateTime?
+  students Student[]
+  sessions QuizSession[]
+  @@index([teacherId, deletedAt])
+}
+/// `code` is the two-digit number students type on the keypad when joining.
+model Student {
+  id String @id @default(uuid()) @db.Uuid
+  classroomId String @db.Uuid
+  classroom Classroom @relation(fields: [classroomId], references: [id])
+  code String
+  name String
+  externalId String @default("")
+  createdAt DateTime @default(now())
+  @@unique([classroomId, code])
+}
+model Exam {
+  id String @id @default(uuid()) @db.Uuid
+  teacherId String @db.Uuid
+  teacher Teacher @relation(fields: [teacherId], references: [id])
+  quizId String @db.Uuid
+  quiz Quiz @relation(fields: [quizId], references: [id])
+  title String
+  description String @default("")
+  shuffleQuestions Boolean @default(true)
+  shuffleOptions Boolean @default(true)
+  durationSeconds Int?
+  createdAt DateTime @default(now())
+  deletedAt DateTime?
+  questions ExamQuestion[]
+  variants ExamVariant[]
+  sessions QuizSession[]
+  @@index([teacherId, deletedAt])
+}
+/// Frozen copy of the quiz questions when the exam was created, so later quiz edits do not change variants.
+model ExamQuestion {
+  id String @id @default(uuid()) @db.Uuid
+  examId String @db.Uuid
+  exam Exam @relation(fields: [examId], references: [id])
+  sourceQuestionId String @db.Uuid
+  content String
+  optionA String
+  optionB String
+  optionC String
+  optionD String
+  type QuestionType @default(SINGLE)
+  correctAnswer String
+  explanation String @default("")
+  knowledge String @default("")
+  topic String @default("")
+  difficulty Difficulty?
+  durationSeconds Int
+  order Int
+  @@unique([examId, order])
+}
+/// layout: [{ "index": order of ExamQuestion, "order": "CADB" }] in the variant's question order.
+model ExamVariant {
+  id String @id @default(uuid()) @db.Uuid
+  examId String @db.Uuid
+  exam Exam @relation(fields: [examId], references: [id])
+  code String
+  layout Json
+  @@unique([examId, code])
+}

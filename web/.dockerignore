@@ -1,0 +1,16 @@
+# Dependencies and build output are recreated inside the image
+**/node_modules
+**/dist
+**/.vite
+
+# Secrets and data must never be baked into images
+.env
+.env.*
+backups
+*.dump
+
+# Large archives and hardware files are not needed for the build
+*.zip
+*.pdf
+*.kicad_*
+firmware

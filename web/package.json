@@ -1,0 +1,19 @@
+{
+  "name": "classpulse", "version": "1.0.0", "private": true,
+  "packageManager": "pnpm@10.17.1",
+  "scripts": {
+    "build": "pnpm --filter @classpulse/shared-types build && pnpm --filter @classpulse/mqtt-contracts build && pnpm --filter @classpulse/backend build && pnpm --filter @classpulse/frontend build",
+    "dev": "node scripts/with-env.mjs pnpm --parallel --filter @classpulse/backend --filter @classpulse/frontend dev",
+    "test": "pnpm test:firmware && pnpm --filter @classpulse/shared-types test && pnpm --filter @classpulse/mqtt-contracts test && pnpm --filter @classpulse/backend test && pnpm --filter @classpulse/frontend test && pnpm --filter @classpulse/device-simulator test",
+    "test:firmware": "bash apps/firmware/test/run.sh",
+    "test:integration": "node scripts/with-env.mjs pnpm --filter @classpulse/backend test:integration",
+    "test:e2e": "node scripts/with-env.mjs tsx scripts/tests/e2e.ts",
+    "db:migrate": "node scripts/with-env.mjs pnpm --filter @classpulse/backend db:migrate",
+    "db:seed": "node scripts/with-env.mjs pnpm --filter @classpulse/backend db:seed",
+    "simulate": "node scripts/with-env.mjs tsx scripts/simulate-devices/index.ts",
+    "provision": "node scripts/with-env.mjs node scripts/provision-device.mjs",
+    "up": "docker compose up --build -d"
+  },
+  "devDependencies": {"@types/node": "^22.18.0", "tsx": "^4.20.5", "typescript": "^5.9.2", "vitest": "^3.2.4"},
+  "dependencies": {"@classpulse/mqtt-contracts": "workspace:*", "@classpulse/shared-types": "workspace:*", "mqtt": "^5.14.1", "socket.io-client": "^4.8.1"}
+}

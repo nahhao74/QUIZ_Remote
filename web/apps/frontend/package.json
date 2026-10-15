@@ -1,0 +1,9 @@
+{
+  "name": "@classpulse/frontend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "dev": "vite --host 0.0.0.0", "build": "tsc -b && vite build", "test": "vitest run", "typecheck": "tsc --noEmit" },
+  "dependencies": { "@classpulse/shared-types": "workspace:*", "@classpulse/device-simulator": "workspace:*", "react": "^18.3.1", "react-dom": "^18.3.1", "react-router-dom": "^6.28.0", "socket.io-client": "^4.8.1", "lucide-react": "^0.468.0" },
+  "devDependencies": { "@types/react": "^18.3.12", "@types/react-dom": "^18.3.1", "@vitejs/plugin-react": "^4.3.4", "typescript": "^5.7.2", "vite": "^6.0.5", "tailwindcss": "^3.4.17", "postcss": "^8.4.49", "autoprefixer": "^10.4.20", "vitest": "^2.1.8", "jsdom": "^25.0.1", "@testing-library/react": "^16.1.0", "@testing-library/jest-dom": "^6.6.3" }
+}

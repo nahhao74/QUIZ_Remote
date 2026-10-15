@@ -1,0 +1,15 @@
+Ref,So luong,Linh kien,Gia tri / loai,Ghi chu
+U1,1,ESP32 DevKit 30 pin,ESP32-WROOM-32,Da co
+DISP1-DISP2,2,Module LED 7 doan 4 so,74HC595 5 chan,Da co; VCC 3V3 khi thu
+K1,1,Keypad membrane 4x4,8 day,Da co
+LED1,1,LED do,SMD 0805,Bo sung khi lam mach day du
+LED2,1,LED xanh,SMD 0805 hoac xuyen lo,Da co
+R1-R4,4,Dien tro bao ve hang keypad,1 kOhm 1/4 W,Cho mach day du
+R5-R8,4,Dien tro keo xuong cot keypad,47 kOhm 1/4 W,Cho mach day du
+R9-R10,2,Dien tro han dong LED,1 kOhm 1/4 W; tam dung 330 Ohm cho LED xanh,Moi LED mot con
+C1,1,Tu hoa dau nguon,470 uF 10 V,Khuyen nghi gan hai display
+C2-C3,2,Tu gom decoupling,100 nF 50 V,Dat gan VCC moi display neu module chua co
+BUF1,1,Bo dem muc logic tuy chon,74AHCT125,Chi can neu cap display bang 5 V
+PS1,1,Nguon USB,5 V toi thieu 1 A,Cap ESP32; lay 3V3 tu board khi thu
+J1,1,Header keypad,1x8 2.54 mm,Cho breadboard/PCB
+J2-J3,2,Header display,1x5 2.54 mm,Theo dung thu tu in tren module

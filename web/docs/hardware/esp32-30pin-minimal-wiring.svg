@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1180" viewBox="0 0 1600 1180">
+  <defs>
+    <style>
+      .title{font:700 34px sans-serif;fill:#10263f}.sub{font:18px sans-serif;fill:#53657a}.board{fill:#202b35;stroke:#0b1118;stroke-width:5}.module{fill:#b8bcc0;stroke:#747b82;stroke-width:3}.antenna{fill:none;stroke:#555d64;stroke-width:8}.usb{fill:#d9dde0;stroke:#747b82;stroke-width:4}.pin{fill:#f3c956;stroke:#8b6d13;stroke-width:2}.label{font:700 16px monospace;fill:#15324d}.dim{font:14px sans-serif;fill:#586b7d}.used{fill:#e7f5ff;stroke:#2786bd;stroke-width:3}.power{fill:#fff3d5;stroke:#d08b0b;stroke-width:3}.led{fill:#eaf9ef;stroke:#259a56;stroke-width:3}.key{fill:#f0eaff;stroke:#7957c8;stroke-width:3}.display{fill:#e9f4ff;stroke:#277db2;stroke-width:3}.head{font:700 21px sans-serif;fill:#10263f}.text{font:17px sans-serif;fill:#213c55}.wire{fill:none;stroke-width:4}.wled{stroke:#25a45e}.wdisp{stroke:#2786bd}.wkey{stroke:#7957c8}.wpwr{stroke:#d08b0b}.warn{fill:#fff0d4;stroke:#dc8c13;stroke-width:3}.num{font:700 18px sans-serif;fill:#fff}.badge{fill:#174e74}
+    </style>
+  </defs>
+  <rect width="1600" height="1180" fill="#f4f7fb"/>
+  <text x="55" y="58" class="title">ESP32 DevKit V1 30 chân — 2×LED 4 số 74HC595</text>
+  <text x="55" y="92" class="sub">Nhìn từ trên xuống · cổng Micro-USB ở phía dưới · tên chân theo chữ in trên board</text>
+
+  <rect x="590" y="130" width="420" height="880" rx="30" class="board"/>
+  <rect x="675" y="235" width="250" height="370" rx="8" class="module"/>
+  <path d="M710 280 h180 m-180 25 h180 m-180 25 h180 m-180 25 h180" class="antenna"/>
+  <text x="715" y="440" style="font:700 25px sans-serif;fill:#343b40">ESP-WROOM-32</text>
+  <rect x="710" y="945" width="180" height="105" rx="10" class="usb"/>
+  <text x="742" y="1008" class="head">Micro-USB</text>
+
+  <!-- Left header: top to bottom -->
+  <g>
+    <circle cx="625" cy="180" r="10" class="pin"/><text x="470" y="186" class="label">EN</text>
+    <circle cx="625" cy="230" r="10" class="pin"/><text x="435" y="236" class="label">VP / GPIO36</text>
+    <circle cx="625" cy="280" r="10" class="pin"/><text x="435" y="286" class="label">VN / GPIO39</text>
+    <circle cx="625" cy="330" r="10" class="pin"/><text x="500" y="336" class="label">GPIO34</text>
+    <circle cx="625" cy="380" r="10" class="pin"/><text x="500" y="386" class="label">GPIO35</text>
+    <circle cx="625" cy="430" r="12" class="pin"/><text x="500" y="436" class="label">GPIO32</text>
+    <circle cx="625" cy="480" r="12" class="pin"/><text x="500" y="486" class="label">GPIO33</text>
+    <circle cx="625" cy="530" r="12" class="pin"/><text x="500" y="536" class="label">GPIO25</text>
+    <circle cx="625" cy="580" r="12" class="pin"/><text x="500" y="586" class="label">GPIO26</text>
+    <circle cx="625" cy="630" r="12" class="pin"/><text x="500" y="636" class="label">GPIO27</text>
+    <circle cx="625" cy="680" r="12" class="pin"/><text x="500" y="686" class="label">GPIO14</text>
+    <circle cx="625" cy="730" r="10" class="pin"/><text x="500" y="736" class="label">GPIO12</text>
+    <circle cx="625" cy="780" r="12" class="pin"/><text x="500" y="786" class="label">GPIO13</text>
+    <circle cx="625" cy="830" r="12" class="pin"/><text x="530" y="836" class="label">GND</text>
+    <circle cx="625" cy="880" r="10" class="pin"/><text x="530" y="886" class="label">VIN</text>
+  </g>
+
+  <!-- Right header: top to bottom -->
+  <g>
+    <circle cx="975" cy="180" r="12" class="pin"/><text x="1000" y="186" class="label">GPIO23</text>
+    <circle cx="975" cy="230" r="12" class="pin"/><text x="1000" y="236" class="label">GPIO22</text>
+    <circle cx="975" cy="280" r="10" class="pin"/><text x="1000" y="286" class="label">TX0 / GPIO1</text>
+    <circle cx="975" cy="330" r="10" class="pin"/><text x="1000" y="336" class="label">RX0 / GPIO3</text>
+    <circle cx="975" cy="380" r="12" class="pin"/><text x="1000" y="386" class="label">GPIO21</text>
+    <circle cx="975" cy="430" r="12" class="pin"/><text x="1000" y="436" class="label">GPIO19</text>
+    <circle cx="975" cy="480" r="12" class="pin"/><text x="1000" y="486" class="label">GPIO18</text>
+    <circle cx="975" cy="530" r="10" class="pin"/><text x="1000" y="536" class="label">GPIO5</text>
+    <circle cx="975" cy="580" r="12" class="pin"/><text x="1000" y="586" class="label">GPIO17 / TX2</text>
+    <circle cx="975" cy="630" r="10" class="pin"/><text x="1000" y="636" class="label">GPIO16 / RX2</text>
+    <circle cx="975" cy="680" r="10" class="pin"/><text x="1000" y="686" class="label">GPIO4</text>
+    <circle cx="975" cy="730" r="10" class="pin"/><text x="1000" y="736" class="label">GPIO2</text>
+    <circle cx="975" cy="780" r="10" class="pin"/><text x="1000" y="786" class="label">GPIO15</text>
+    <circle cx="975" cy="830" r="12" class="pin"/><text x="1000" y="836" class="label">GND</text>
+    <circle cx="975" cy="880" r="12" class="pin"/><text x="1000" y="886" class="label">3V3</text>
+  </g>
+
+  <!-- Peripheral callouts -->
+  <rect x="55" y="135" width="330" height="145" rx="16" class="led"/>
+  <circle cx="85" cy="165" r="20" class="badge"/><text x="79" y="172" class="num">1</text>
+  <text x="120" y="172" class="head">LED xanh + 330 Ω</text>
+  <text x="80" y="215" class="text">GPIO17 → 330 Ω → anode</text>
+  <text x="80" y="250" class="text">cathode → GND</text>
+  <path d="M385 210 H470 V580 H975" class="wire wled"/>
+
+  <rect x="1165" y="135" width="370" height="175" rx="16" class="display"/>
+  <circle cx="1195" cy="165" r="20" class="badge"/><text x="1189" y="172" class="num">2</text>
+  <text x="1230" y="172" class="head">Display 74HC595 số 1</text>
+  <text x="1190" y="210" class="text">VCC→3V3 · GND→GND</text>
+  <text x="1190" y="245" class="text">SCLK→18 · RCLK→19</text>
+  <text x="1190" y="280" class="text">DIO→GPIO21 · hiện 1234</text>
+  <path d="M1165 245 H1095 V480 H975" class="wire wdisp"/>
+  <path d="M1165 280 H1080 V380 H975" class="wire wdisp"/>
+
+  <rect x="1165" y="355" width="370" height="175" rx="16" class="display"/>
+  <circle cx="1195" cy="385" r="20" class="badge"/><text x="1189" y="392" class="num">3</text>
+  <text x="1230" y="392" class="head">Display 74HC595 số 2</text>
+  <text x="1190" y="430" class="text">VCC→3V3 · GND→GND</text>
+  <text x="1190" y="465" class="text">SCLK→18 · RCLK→19</text>
+  <text x="1190" y="500" class="text">DIO→GPIO22 · hiện 5678</text>
+  <path d="M1165 465 H1095 V480 H975" class="wire wdisp"/>
+  <path d="M1165 500 H1060 V230 H975" class="wire wdisp"/>
+
+  <rect x="55" y="355" width="390" height="360" rx="16" class="key"/>
+  <circle cx="85" cy="385" r="20" class="badge"/><text x="79" y="392" class="num">4</text>
+  <text x="120" y="392" class="head">Keypad 4×4</text>
+  <text x="80" y="440" class="text">R1 → GPIO25</text>
+  <text x="80" y="475" class="text">R2 → GPIO26</text>
+  <text x="80" y="510" class="text">R3 → GPIO27</text>
+  <text x="80" y="545" class="text">R4 → GPIO32</text>
+  <text x="245" y="440" class="text">C1 → GPIO13</text>
+  <text x="245" y="475" class="text">C2 → GPIO14</text>
+  <text x="245" y="510" class="text">C3 → GPIO23</text>
+  <text x="245" y="545" class="text">C4 → GPIO33</text>
+  <text x="80" y="600" class="text">Chỉ nhấn một phím/lần.</text>
+  <text x="80" y="640" class="text">Nếu sai phím: rút USB, đổi</text>
+  <text x="80" y="670" class="text">thứ tự dây hàng/cột keypad.</text>
+  <path d="M445 480 H520 V530 H625" class="wire wkey"/>
+  <path d="M445 520 H485 V180 H975" class="wire wkey"/>
+
+  <rect x="1110" y="760" width="425" height="170" rx="16" class="power"/>
+  <text x="1140" y="800" class="head">Nguồn trong lần thử</text>
+  <text x="1140" y="842" class="text">USB cấp ESP32</text>
+  <text x="1140" y="877" class="text">Display VCC chỉ nối 3V3</text>
+  <text x="1140" y="912" class="text">Tất cả GND nối chung</text>
+  <path d="M1110 875 H1040 V880 H975" class="wire wpwr"/>
+
+  <rect x="75" y="1080" width="1450" height="65" rx="14" class="warn"/>
+  <text x="105" y="1121" class="head">Rút USB trước khi đổi dây. SCLK và RCLK đều phải nối; không được bỏ một trong hai chân.</text>
+</svg>

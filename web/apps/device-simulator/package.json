@@ -1,0 +1,7 @@
+{
+  "name": "@classpulse/device-simulator", "version": "1.0.0", "private": true,
+  "type": "module", "main": "src/index.tsx", "types": "src/index.tsx",
+  "scripts": { "test": "vitest run", "typecheck": "tsc --noEmit" },
+  "dependencies": { "@classpulse/shared-types": "workspace:*", "@classpulse/mqtt-contracts": "workspace:*", "mqtt": "^5.14.1", "react": "^18.3.1" },
+  "devDependencies": { "@types/react": "^18.3.12", "typescript": "^5.9.2", "vitest": "^3.2.4" }
+}

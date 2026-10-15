@@ -1,0 +1,138 @@
+name: classpulse
+services:
+  postgres:
+    image: postgres:17.6-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-classpulse}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Copy .env.example to .env first}
+      POSTGRES_DB: ${POSTGRES_DB:-classpulse}
+    ports: ['127.0.0.1:5432:5432']
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  broker-config:
+    image: node:22-alpine
+    command: ['node', '/config/prepare-emqx.mjs']
+    environment:
+      MQTT_USERNAME: ${MQTT_USERNAME:-backend}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:?MQTT_PASSWORD required}
+      MQTT_SIMULATOR_ENABLED: ${MQTT_SIMULATOR_ENABLED:-true}
+      MQTT_SIMULATOR_USERNAME: ${MQTT_SIMULATOR_USERNAME:-simulator}
+      MQTT_SIMULATOR_PASSWORD: ${MQTT_SIMULATOR_PASSWORD:?Simulator password required}
+      EMQX_CONFIG_DIR: /emqx-config
+    volumes:
+      - ./infra/emqx/prepare-emqx.mjs:/config/prepare-emqx.mjs:ro
+      - broker-config:/emqx-config
+
+  emqx:
+    image: emqx/emqx:5.8.8
+    hostname: emqx.local
+    restart: unless-stopped
+    depends_on:
+      broker-config: {condition: service_completed_successfully}
+    environment:
+      EMQX_NODE__NAME: emqx@emqx.local
+      EMQX_NODE__COOKIE: ${EMQX_NODE_COOKIE:?EMQX_NODE_COOKIE required}
+      EMQX_DASHBOARD__DEFAULT_USERNAME: ${EMQX_DASHBOARD_USER:-admin}
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: ${EMQX_DASHBOARD_PASSWORD:?Dashboard password required}
+    ports:
+      # MQTT TCP is reachable only through this host's classroom Wi-Fi address.
+      # Override MQTT_TCP_BIND_ADDRESS in .env if the host IP changes.
+      - '${MQTT_TCP_BIND_ADDRESS:-172.19.163.204}:1883:1883'
+      - '127.0.0.1:8083:8083'
+      - '127.0.0.1:18083:18083'
+    volumes:
+      - ./infra/emqx/emqx.conf:/opt/emqx/etc/emqx.conf:ro
+      - broker-config:/emqx-config:ro
+      - emqx-data:/opt/emqx/data
+      - emqx-log:/opt/emqx/log
+    healthcheck:
+      test: ['CMD', '/opt/emqx/bin/emqx', 'ctl', 'status']
+      interval: 10s
+      timeout: 10s
+      start_period: 30s
+      retries: 15
+
+  backend:
+    build:
+      context: .
+      dockerfile: infra/backend.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres: {condition: service_healthy}
+      emqx: {condition: service_healthy}
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-classpulse}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-classpulse}?schema=public
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET required}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      TRUST_PROXY: ${TRUST_PROXY:-true}
+      MQTT_URL: mqtt://emqx:1883
+      MQTT_USERNAME: ${MQTT_USERNAME:-backend}
+      MQTT_PASSWORD: ${MQTT_PASSWORD}
+      # AI stays disabled until one source is configured (see .env.example): Gemini free tier, local Ollama or Claude.
+      AI_PROVIDER: ${AI_PROVIDER:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-}
+      OLLAMA_URL: ${OLLAMA_URL:-}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-}
+      OLLAMA_NUM_CTX: ${OLLAMA_NUM_CTX:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-}
+    ports: ['127.0.0.1:3000:3000']
+    healthcheck:
+      test: ['CMD', 'node', '-e', 'fetch("http://localhost:3000/api/health").then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))']
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 12
+
+  frontend:
+    build:
+      context: .
+      dockerfile: infra/frontend.Dockerfile
+      args:
+        VITE_MQTT_WS_URL: ${VITE_MQTT_WS_URL:-ws://localhost:8083/mqtt}
+        VITE_MQTT_USERNAME: ${VITE_MQTT_USERNAME:-simulator}
+        VITE_MQTT_PASSWORD: ${VITE_MQTT_PASSWORD:-simulator-dev-only}
+    restart: unless-stopped
+    depends_on:
+      backend: {condition: service_healthy}
+    ports: ['127.0.0.1:8080:80']
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1/healthz']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Optional local AI, unlimited and offline. Start with: docker compose --profile ollama up -d
+  # then download a model once: docker compose exec ollama ollama pull qwen3:4b-instruct
+  # and set OLLAMA_URL=http://ollama:11434 in .env. Runs on CPU unless the host exposes a GPU to containers.
+  ollama:
+    image: ollama/ollama:0.40.3
+    profiles: [ollama]
+    restart: unless-stopped
+    environment:
+      # One request at a time, and an 8-bit context cache: qwen3:4b-instruct at 32K context needs ~5.3 GB RAM instead of ~7.6 GB.
+      OLLAMA_NUM_PARALLEL: 1
+      OLLAMA_KV_CACHE_TYPE: q8_0
+    volumes: [ollama-data:/root/.ollama]
+    healthcheck:
+      test: ['CMD', 'ollama', 'list']
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:
+  emqx-data:
+  emqx-log:
+  broker-config:
+  ollama-data:
