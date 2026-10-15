@@ -296,8 +296,8 @@ def _pretty(value, fpid):
         out = f"{m.group(1)} {({'R': 'Ω', 'k': 'kΩ', 'M': 'MΩ', '': 'Ω'})[m.group(2)]}"
     else:
         names = {'LBSS138LT1G': 'BSS138', 'MMBT3904-1AM': 'MMBT3904', 'MT3608L': 'MT3608', '74HC595D,118': '74HC595', '3161BS_LOGICAL_CA': '3161BS',
-                 'LUA_SOCKET_ROW_A': 'Đế ESP32 hàng A', 'LUA_SOCKET_ROW_B': 'Đế ESP32 hàng B', 'LK2114_BATTERY': 'Đầu nối pin',
-                 '6x6_THT_NO': 'Nút 6×6', 'SS-12F23G4': 'Công tắc nguồn'}
+                 'LUA_SOCKET_ROW_A': 'ESP32 socket row A', 'LUA_SOCKET_ROW_B': 'ESP32 socket row B', 'LK2114_BATTERY': 'Battery connector',
+                 '6x6_THT_NO': '6×6 switch', 'SS-12F23G4': 'Power switch'}
         out = names.get(v) or re.sub(r'(\d)\s*([unp])([FH])', lambda k: f"{k.group(1)} {'µ' if k.group(2) == 'u' else k.group(2)}{k.group(3)}", v)
     tag = next((t for t in ('1206', '1210', '3216') if t in fpid), None)
     if tag:
@@ -493,7 +493,7 @@ def solder():
             bx = R(p['body'])
             if p['kind'] in ('socket',):
                 bx = (min(R(q['r'])[0] for q in p['pads']), min(R(q['r'])[1] for q in p['pads']), max(R(q['r'])[2] for q in p['pads']), max(R(q['r'])[3] for q in p['pads']))
-            sub = p['ref'] if p['side'] == side or not p['tht'] else f"{p['ref']} (lắp mặt {'sau' if p['side'] == 'B' else 'trước'})"
+            sub = p['ref'] if p['side'] == side or not p['tht'] else f"{p['ref']} (mounted on {'back' if p['side'] == 'B' else 'front'})"
             lines = [(p['value'], 10.5, True, '#111'), (sub, 8.5, False, '#555')]
             w = max(len(t) * s * (0.6 if b_ else 0.54) for t, s, b_, c in lines) + 2
             h = sum(s * 1.2 for t, s, b_, c in lines)
@@ -532,31 +532,31 @@ def solder():
     names = lambda ks: ', '.join(sorted(p['ref'] for p in smd if p['kind'] in ks))
     by_val = lambda k: Counter(p['value'] for p in smd if p['kind'] == k)
     smd_legend = [
-        ('res', f"Điện trở {cnt['res']} con, KHÔNG phân cực. Giá trị in trên hình; chữ in trên linh kiện rất nhỏ, hãy chia túi theo giá trị hoặc đo bằng đồng hồ."),
-        ('cer', f"Tụ gốm {cnt['cer']} con, KHÔNG phân cực (22 µF cỡ 1210, 100 nF cỡ 0805)."),
-        ('tant', "Tụ tantan C_GATE 4,7 µF: có cực. Vạch vàng trên thân = đầu DƯƠNG (+), hàn về phía dấu +."),
-        ('diode', "Diode: vạch trắng trên thân = đầu K (cực âm), hàn về phía chữ K. DWAKE0–3 loại 1N4148W, DBOOST loại SS34 (to, cỡ SMC)."),
-        ('pmos', f"AO3401A (P-MOSFET) {cnt['pmos']} con: {names(['pmos'])}. Chân G/S/D ghi trên pad."),
-        ('npn', f"MMBT3904 (NPN) {cnt['npn']} con: {names(['npn'])}. Chân B/E/C ghi trên pad."),
-        ('nmos', f"BSS138 (N-MOSFET) {cnt['nmos']} con: {names(['nmos'])}. Chân G/S/D ghi trên pad. Ba loại SOT-23 này giống hệt nhau, đừng để lẫn túi."),
-        ('ic', "IC (U1 MT3608, U2 74HC595): chấm hồng = chân 1, khớp với chấm hoặc vết lõm trên thân IC."),
-        ('ind', "Cuộn cảm L1 22 µH: không phân cực."),
+        ('res', f"{cnt['res']} resistors, NOT polarised. Values are printed in the figure; the markings on the parts are very small, so sort them into bags by value or check with a multimeter."),
+        ('cer', f"{cnt['cer']} ceramic capacitors, NOT polarised (22 µF in 1210 size, 100 nF in 0805 size)."),
+        ('tant', "Tantalum capacitor C_GATE 4.7 µF: polarised. Yellow band on the body = POSITIVE (+) end; solder toward the + mark."),
+        ('diode', "Diodes: white band on the body = cathode (K), solder toward the K mark. DWAKE0–3 are 1N4148W, DBOOST is SS34 (large, SMC size)."),
+        ('pmos', f"AO3401A (P-MOSFET), {cnt['pmos']} parts: {names(['pmos'])}. Pins G/S/D are marked on the pads."),
+        ('npn', f"MMBT3904 (NPN), {cnt['npn']} parts: {names(['npn'])}. Pins B/E/C are marked on the pads."),
+        ('nmos', f"BSS138 (N-MOSFET), {cnt['nmos']} parts: {names(['nmos'])}. Pins G/S/D are marked on the pads. The three SOT-23 types look identical, so keep them in separate bags."),
+        ('ic', "ICs (U1 MT3608, U2 74HC595): pink dot = pin 1; match it to the dot or notch on the IC body."),
+        ('ind', "Inductor L1 22 µH: not polarised."),
     ]
     tht_legend = {
-        'key': "Nút nhấn 6×6, 16 cái, đánh số 1–16 theo thứ tự SW1…SW16, đủ 4 chân.",
-        'disp': "LED 7 thanh 3161BS dương chung (DS1, DS2). Chấm cam = chân 1, chấm vàng = chân DP (dấu chấm thập phân). Đặt LED sao cho chân DP khớp chấm vàng; chưa kiểm tra bằng linh kiện thật.",
-        'socket': "Hai hàng đế cái cho module ESP32 (J1, J2). Chấm hồng = chân 1 (đầu USB của module) và chân 15 (đầu anten).",
-        'jbat': "Đầu nối pin JBAT: + (dây đỏ của hộp pin) và − (dây đen). Cắm sai cực có thể làm hỏng mạch.",
-        'swmain': "Công tắc trượt nguồn SW_MAIN.",
-        'elec': "Tụ hoá CRES 470 µF 16 V: có cực. Vạch trắng trên thân = chân ÂM (−). Chân dài = dương (+). Dấu + ở pad 1.",
+        'key': "6×6 tactile switches, 16 pcs, numbered 1–16 in the order SW1…SW16, all 4 pins.",
+        'disp': "3161BS 7-segment LEDs, common anode (DS1, DS2). Orange dot = pin 1; yellow dot = DP pin (decimal point). Orient each LED so its DP pin matches the yellow dot. Not yet checked with real parts.",
+        'socket': "Two female header rows for the ESP32 module (J1, J2). Pink dot = pin 1 (the module's USB end) and pin 15 (the antenna end).",
+        'jbat': "Battery connector JBAT: + (red wire from the battery holder) and − (black wire). Reversed polarity can damage the circuit.",
+        'swmain': "Power slide switch SW_MAIN.",
+        'elec': "Electrolytic capacitor CRES 470 µF 16 V: polarised. White stripe on the body = NEGATIVE (−) pin. Longer leg = positive (+). The + mark is on pad 1.",
     }
-    kind_name = {'key': 'nút nhấn', 'disp': 'LED 7 thanh', 'socket': 'đế ESP32', 'jbat': 'đầu pin', 'swmain': 'công tắc nguồn', 'elec': 'tụ hoá'}
+    kind_name = {'key': 'switch', 'disp': '7-segment LED', 'socket': 'ESP32 socket', 'jbat': 'battery connector', 'swmain': 'power switch', 'elec': 'electrolytic capacitor'}
     side_kinds = {sd: [k for k in tht_legend if any(p['kind'] == k and p['side'] == sd for p in parts.values())] for sd in 'FB'}
-    back_notes = ["Thứ tự hàn gợi ý: 1) điện trở, tụ gốm  2) diode, transistor  3) IC, cuộn cảm, tụ 22 µF  4) linh kiện xuyên lỗ.",
-                  "Chấm tròn xám nhỏ và vòng tròn nhỏ không có linh kiện là pad đo, để trống. Vòng nét đứt quanh lỗ vít là vùng không có đồng."]
-    sw_text = {'front': "MẶT TRƯỚC. Linh kiện lắp ở mặt này: " + (', '.join(kind_name[k] for k in side_kinds['F']) or 'không có') + ". Cắm từ mặt này, hàn chân ở mặt đối diện.",
-               'back': "MẶT SAU, nhìn từ phía sau (lật board như lật trang sách, trái-phải đã đảo). Lắp ở mặt này: linh kiện dán"
-                       + ''.join(', ' + kind_name[k] for k in side_kinds['B']) + (". Linh kiện xuyên lỗ lắp ở mặt sau cắm từ mặt này, hàn chân ở mặt trước." if side_kinds['B'] else "."),}
+    back_notes = ["Suggested soldering order: 1) resistors, ceramic capacitors  2) diodes, transistors  3) ICs, inductor, 22 µF capacitors  4) through-hole parts.",
+                  "Small grey dots and small empty circles are test pads; leave them empty. The dashed ring around each screw hole marks an area with no copper."]
+    sw_text = {'front': "FRONT SIDE. Parts on this side: " + (', '.join(kind_name[k] for k in side_kinds['F']) or 'none') + ". Insert from this side, solder the pins on the opposite side.",
+               'back': "BACK SIDE, seen from behind (flip the board like a book page, so left and right are swapped). Parts on this side: surface-mount parts"
+                       + ''.join(', ' + kind_name[k] for k in side_kinds['B']) + (". Through-hole parts mounted on the back are inserted from this side and soldered on the front." if side_kinds['B'] else "."),}
     has_jumpers = (PRJ / 'route' / 'jumpers.png').exists()
     out = PRJ / 'route'
     chrome = shutil.which('google-chrome')
@@ -565,9 +565,9 @@ def solder():
         legend = (smd_legend if back else []) + [(k, tht_legend[k]) for k in side_kinds['B' if back else 'F']]
         notes = back_notes if back else []
         if UNTENT_VIAS and not back:
-            notes = ['Vòng vàng nhỏ không có linh kiện là lỗ dây nhảy: luồn dây qua lỗ ở mặt này, hàn ở mặt sau (xem route/jumpers.png).']
+            notes = ['Small gold rings with no part are jumper holes: thread the wire through the hole from this side and solder it on the back (see route/jumpers.png).']
         if has_jumpers and back:
-            notes = notes + ['Board 1 lớp: vòng vàng nhỏ không có linh kiện là lỗ dây nhảy, để trống lúc hàn linh kiện. Sau đó nối dây theo hình route/jumpers.png.']
+            notes = notes + ['Single-sided board: small gold rings with no part are jumper holes; leave them empty while soldering the parts. Then wire the jumpers as shown in route/jumpers.png.']
         width = M * 2 + W * S
         y0 = TOP + H * S + 28
         wrap = textwrap.wrap
@@ -582,7 +582,7 @@ def solder():
         height = y0 + 20 * len(rows) + 24
         svg = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{width:.0f}" height="{height:.0f}" viewBox="0 0 {width:.0f} {height:.0f}" font-family="DejaVu Sans, Arial, sans-serif">',
                f'<rect width="100%" height="100%" fill="white"/>',
-               f'<text x="{M}" y="26" font-size="19" font-weight="700" fill="#111">Sơ đồ hàn · board {W:g} × {H:g} mm · {"mặt sau" if back else "mặt trước"}</text>']
+               f'<text x="{M}" y="26" font-size="19" font-weight="700" fill="#111">Assembly guide · board {W:g} × {H:g} mm · {"back side" if back else "front side"}</text>']
         for i, ln in enumerate(wrap(sw_text['back' if back else 'front'], int(width / 6.4))):
             svg.append(f'<text x="{M}" y="{46 + i * 15}" font-size="12" fill="#444">{html.escape(ln)}</text>')
         svg += els

@@ -1,8 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="880" height="1902" viewBox="0 0 880 1902" font-family="DejaVu Sans, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="1982" viewBox="0 0 880 1982" font-family="DejaVu Sans, Arial, sans-serif">
 <rect width="100%" height="100%" fill="white"/>
-<text x="24.0" y="26" font-size="19" font-weight="700" fill="#111">Sơ đồ hàn · board 52 × 90 mm · mặt sau</text>
-<text x="24.0" y="46" font-size="12" fill="#444">MẶT SAU, nhìn từ phía sau (lật board như lật trang sách, trái-phải đã đảo). Lắp ở mặt này: linh kiện dán, đế ESP32, đầu pin, công tắc</text>
-<text x="24.0" y="61" font-size="12" fill="#444">nguồn, tụ hoá. Linh kiện xuyên lỗ lắp ở mặt sau cắm từ mặt này, hàn chân ở mặt trước.</text>
+<text x="24.0" y="26" font-size="19" font-weight="700" fill="#111">Assembly guide · board 52 × 90 mm · back side</text>
+<text x="24.0" y="46" font-size="12" fill="#444">BACK SIDE, seen from behind (flip the board like a book page, so left and right are swapped). Parts on this side: surface-mount parts,</text>
+<text x="24.0" y="61" font-size="12" fill="#444">ESP32 socket, battery connector, power switch, electrolytic capacitor. Through-hole parts mounted on the back are inserted from this side</text>
+<text x="24.0" y="76" font-size="12" fill="#444">and soldered on the front.</text>
 <rect x="24.0" y="70.0" width="832.0" height="1440.0" rx="4" fill="#e9f3e6" stroke="#1b4d2b" stroke-width="3" opacity="1.0"/>
 <circle cx="68.0" cy="238.0" r="35.2" fill="none" stroke="#999" stroke-width="1" stroke-dasharray="4 3"/>
 <circle cx="68.0" cy="238.0" r="17.6" fill="white" stroke="#444" stroke-width="1.5"/>
@@ -586,19 +587,19 @@
 <line x1="324.8" y1="1133.2" x2="324.8" y2="1185.4" stroke="#495057" stroke-width="0.8"/>
 <line x1="321.6" y1="1302.8" x2="413.9" y2="1230.2" stroke="#495057" stroke-width="0.8"/>
 <line x1="321.6" y1="1339.6" x2="321.6" y2="1407.8" stroke="#495057" stroke-width="0.8"/>
-<text x="760.0" y="81.1" font-size="10.5" fill="#111" text-anchor="middle" font-weight="700" stroke="white" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Đầu nối pin</text>
+<text x="760.0" y="81.1" font-size="10.5" fill="#111" text-anchor="middle" font-weight="700" stroke="white" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Battery connector</text>
 <text x="760.0" y="91.4" font-size="8.5" fill="#555" text-anchor="middle" font-weight="400" stroke="white" stroke-width="3" paint-order="stroke" stroke-linejoin="round">JBAT</text>
-<text x="160.0" y="81.9" font-size="10.5" fill="#111" text-anchor="middle" font-weight="700" stroke="white" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Công tắc nguồn</text>
+<text x="160.0" y="81.9" font-size="10.5" fill="#111" text-anchor="middle" font-weight="700" stroke="white" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Power switch</text>
 <text x="160.0" y="92.2" font-size="8.5" fill="#555" text-anchor="middle" font-weight="400" stroke="white" stroke-width="3" paint-order="stroke" stroke-linejoin="round">SW_MAIN</text>
 <text x="520.0" y="103.5" font-size="10.5" fill="#111" text-anchor="middle" font-weight="700" stroke="white" stroke-width="3" paint-order="stroke" stroke-linejoin="round">3161BS</text>
-<text x="520.0" y="113.8" font-size="8.5" fill="#555" text-anchor="middle" font-weight="400" stroke="white" stroke-width="3" paint-order="stroke" stroke-linejoin="round">DS1 (lắp mặt trước)</text>
+<text x="520.0" y="113.8" font-size="8.5" fill="#555" text-anchor="middle" font-weight="400" stroke="white" stroke-width="3" paint-order="stroke" stroke-linejoin="round">DS1 (mounted on front)</text>
 <text x="360.0" y="103.5" font-size="10.5" fill="#111" text-anchor="middle" font-weight="700" stroke="white" stroke-width="3" paint-order="stroke" stroke-linejoin="round">3161BS</text>
-<text x="360.0" y="113.8" font-size="8.5" fill="#555" text-anchor="middle" font-weight="400" stroke="white" stroke-width="3" paint-order="stroke" stroke-linejoin="round">DS2 (lắp mặt trước)</text>
+<text x="360.0" y="113.8" font-size="8.5" fill="#555" text-anchor="middle" font-weight="400" stroke="white" stroke-width="3" paint-order="stroke" stroke-linejoin="round">DS2 (mounted on front)</text>
 <text x="744.0" y="757.9" font-size="10.5" fill="#111" text-anchor="middle" font-weight="700" stroke="white" stroke-width="3" paint-order="stroke" stroke-linejoin="round">470 µF</text>
 <text x="744.0" y="768.2" font-size="8.5" fill="#555" text-anchor="middle" font-weight="400" stroke="white" stroke-width="3" paint-order="stroke" stroke-linejoin="round">CRES</text>
-<text x="643.2" y="1489.7" font-size="10.5" fill="#111" text-anchor="middle" font-weight="700" stroke="white" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Đế ESP32 hàng A</text>
+<text x="643.2" y="1489.7" font-size="10.5" fill="#111" text-anchor="middle" font-weight="700" stroke="white" stroke-width="3" paint-order="stroke" stroke-linejoin="round">ESP32 socket row A</text>
 <text x="643.2" y="1500.0" font-size="8.5" fill="#555" text-anchor="middle" font-weight="400" stroke="white" stroke-width="3" paint-order="stroke" stroke-linejoin="round">J1</text>
-<text x="236.8" y="1489.7" font-size="10.5" fill="#111" text-anchor="middle" font-weight="700" stroke="white" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Đế ESP32 hàng B</text>
+<text x="236.8" y="1489.7" font-size="10.5" fill="#111" text-anchor="middle" font-weight="700" stroke="white" stroke-width="3" paint-order="stroke" stroke-linejoin="round">ESP32 socket row B</text>
 <text x="236.8" y="1500.0" font-size="8.5" fill="#555" text-anchor="middle" font-weight="400" stroke="white" stroke-width="3" paint-order="stroke" stroke-linejoin="round">J2</text>
 <text x="248.0" y="216.3" font-size="10.5" fill="#111" text-anchor="middle" font-weight="700" stroke="white" stroke-width="3" paint-order="stroke" stroke-linejoin="round">AO3401A</text>
 <text x="248.0" y="226.6" font-size="8.5" fill="#555" text-anchor="middle" font-weight="400" stroke="white" stroke-width="3" paint-order="stroke" stroke-linejoin="round">QPWR</text>
@@ -737,35 +738,39 @@
 <text x="744.8" y="1395.9" font-size="10.5" fill="#111" text-anchor="middle" font-weight="700" stroke="white" stroke-width="3" paint-order="stroke" stroke-linejoin="round">22 kΩ</text>
 <text x="744.8" y="1406.2" font-size="8.5" fill="#555" text-anchor="middle" font-weight="400" stroke="white" stroke-width="3" paint-order="stroke" stroke-linejoin="round">RROW3</text>
 <rect x="24.0" y="1527.0" width="14" height="14" rx="2" fill="#c9a66b" stroke="#222" stroke-width="0.8"/>
-<text x="48.0" y="1538.0" font-size="12" fill="#222">Điện trở 41 con, KHÔNG phân cực. Giá trị in trên hình; chữ in trên linh kiện rất nhỏ, hãy chia túi theo giá trị hoặc đo bằng</text>
-<text x="48.0" y="1558.0" font-size="12" fill="#222">đồng hồ.</text>
+<text x="48.0" y="1538.0" font-size="12" fill="#222">41 resistors, NOT polarised. Values are printed in the figure; the markings on the parts are very small, so sort them into</text>
+<text x="48.0" y="1558.0" font-size="12" fill="#222">bags by value or check with a multimeter.</text>
 <rect x="24.0" y="1567.0" width="14" height="14" rx="2" fill="#4c6ef5" stroke="#222" stroke-width="0.8"/>
-<text x="48.0" y="1578.0" font-size="12" fill="#222">Tụ gốm 5 con, KHÔNG phân cực (22 µF cỡ 1210, 100 nF cỡ 0805).</text>
+<text x="48.0" y="1578.0" font-size="12" fill="#222">5 ceramic capacitors, NOT polarised (22 µF in 1210 size, 100 nF in 0805 size).</text>
 <rect x="24.0" y="1587.0" width="14" height="14" rx="2" fill="#f08c00" stroke="#222" stroke-width="0.8"/>
-<text x="48.0" y="1598.0" font-size="12" fill="#222">Tụ tantan C_GATE 4,7 µF: có cực. Vạch vàng trên thân = đầu DƯƠNG (+), hàn về phía dấu +.</text>
+<text x="48.0" y="1598.0" font-size="12" fill="#222">Tantalum capacitor C_GATE 4.7 µF: polarised. Yellow band on the body = POSITIVE (+) end; solder toward the + mark.</text>
 <rect x="24.0" y="1607.0" width="14" height="14" rx="2" fill="#e03131" stroke="#222" stroke-width="0.8"/>
-<text x="48.0" y="1618.0" font-size="12" fill="#222">Diode: vạch trắng trên thân = đầu K (cực âm), hàn về phía chữ K. DWAKE0–3 loại 1N4148W, DBOOST loại SS34 (to, cỡ SMC).</text>
-<rect x="24.0" y="1627.0" width="14" height="14" rx="2" fill="#7048e8" stroke="#222" stroke-width="0.8"/>
-<text x="48.0" y="1638.0" font-size="12" fill="#222">AO3401A (P-MOSFET) 3 con: QDIG1, QDIG2, QPWR. Chân G/S/D ghi trên pad.</text>
-<rect x="24.0" y="1647.0" width="14" height="14" rx="2" fill="#2f9e44" stroke="#222" stroke-width="0.8"/>
-<text x="48.0" y="1658.0" font-size="12" fill="#222">MMBT3904 (NPN) 6 con: QHOLD, QROW0, QROW1, QROW2, QROW3, QWAKE. Chân B/E/C ghi trên pad.</text>
-<rect x="24.0" y="1667.0" width="14" height="14" rx="2" fill="#0b9fb0" stroke="#222" stroke-width="0.8"/>
-<text x="48.0" y="1678.0" font-size="12" fill="#222">BSS138 (N-MOSFET) 4 con: QCOL0, QCOL1, QCOL2, QCOL3. Chân G/S/D ghi trên pad. Ba loại SOT-23 này giống hệt nhau, đừng để lẫn</text>
-<text x="48.0" y="1698.0" font-size="12" fill="#222">túi.</text>
-<rect x="24.0" y="1707.0" width="14" height="14" rx="2" fill="#343a40" stroke="#222" stroke-width="0.8"/>
-<text x="48.0" y="1718.0" font-size="12" fill="#222">IC (U1 MT3608, U2 74HC595): chấm hồng = chân 1, khớp với chấm hoặc vết lõm trên thân IC.</text>
-<rect x="24.0" y="1727.0" width="14" height="14" rx="2" fill="#8d5524" stroke="#222" stroke-width="0.8"/>
-<text x="48.0" y="1738.0" font-size="12" fill="#222">Cuộn cảm L1 22 µH: không phân cực.</text>
-<rect x="24.0" y="1747.0" width="14" height="14" rx="2" fill="#868e96" stroke="#222" stroke-width="0.8"/>
-<text x="48.0" y="1758.0" font-size="12" fill="#222">Hai hàng đế cái cho module ESP32 (J1, J2). Chấm hồng = chân 1 (đầu USB của module) và chân 15 (đầu anten).</text>
-<rect x="24.0" y="1767.0" width="14" height="14" rx="2" fill="#e8590c" stroke="#222" stroke-width="0.8"/>
-<text x="48.0" y="1778.0" font-size="12" fill="#222">Đầu nối pin JBAT: + (dây đỏ của hộp pin) và − (dây đen). Cắm sai cực có thể làm hỏng mạch.</text>
-<rect x="24.0" y="1787.0" width="14" height="14" rx="2" fill="#5c7cfa" stroke="#222" stroke-width="0.8"/>
-<text x="48.0" y="1798.0" font-size="12" fill="#222">Công tắc trượt nguồn SW_MAIN.</text>
-<rect x="24.0" y="1807.0" width="14" height="14" rx="2" fill="#1c3d6e" stroke="#222" stroke-width="0.8"/>
-<text x="48.0" y="1818.0" font-size="12" fill="#222">Tụ hoá CRES 470 µF 16 V: có cực. Vạch trắng trên thân = chân ÂM (−). Chân dài = dương (+). Dấu + ở pad 1.</text>
-<text x="24.0" y="1838.0" font-size="12" fill="#c92a2a">•</text>
-<text x="48.0" y="1838.0" font-size="12" fill="#222">Thứ tự hàn gợi ý: 1) điện trở, tụ gốm  2) diode, transistor  3) IC, cuộn cảm, tụ 22 µF  4) linh kiện xuyên lỗ.</text>
-<text x="24.0" y="1858.0" font-size="12" fill="#c92a2a">•</text>
-<text x="48.0" y="1858.0" font-size="12" fill="#222">Chấm tròn xám nhỏ và vòng tròn nhỏ không có linh kiện là pad đo, để trống. Vòng nét đứt quanh lỗ vít là vùng không có đồng.</text>
+<text x="48.0" y="1618.0" font-size="12" fill="#222">Diodes: white band on the body = cathode (K), solder toward the K mark. DWAKE0–3 are 1N4148W, DBOOST is SS34 (large, SMC</text>
+<text x="48.0" y="1638.0" font-size="12" fill="#222">size).</text>
+<rect x="24.0" y="1647.0" width="14" height="14" rx="2" fill="#7048e8" stroke="#222" stroke-width="0.8"/>
+<text x="48.0" y="1658.0" font-size="12" fill="#222">AO3401A (P-MOSFET), 3 parts: QDIG1, QDIG2, QPWR. Pins G/S/D are marked on the pads.</text>
+<rect x="24.0" y="1667.0" width="14" height="14" rx="2" fill="#2f9e44" stroke="#222" stroke-width="0.8"/>
+<text x="48.0" y="1678.0" font-size="12" fill="#222">MMBT3904 (NPN), 6 parts: QHOLD, QROW0, QROW1, QROW2, QROW3, QWAKE. Pins B/E/C are marked on the pads.</text>
+<rect x="24.0" y="1687.0" width="14" height="14" rx="2" fill="#0b9fb0" stroke="#222" stroke-width="0.8"/>
+<text x="48.0" y="1698.0" font-size="12" fill="#222">BSS138 (N-MOSFET), 4 parts: QCOL0, QCOL1, QCOL2, QCOL3. Pins G/S/D are marked on the pads. The three SOT-23 types look</text>
+<text x="48.0" y="1718.0" font-size="12" fill="#222">identical, so keep them in separate bags.</text>
+<rect x="24.0" y="1727.0" width="14" height="14" rx="2" fill="#343a40" stroke="#222" stroke-width="0.8"/>
+<text x="48.0" y="1738.0" font-size="12" fill="#222">ICs (U1 MT3608, U2 74HC595): pink dot = pin 1; match it to the dot or notch on the IC body.</text>
+<rect x="24.0" y="1747.0" width="14" height="14" rx="2" fill="#8d5524" stroke="#222" stroke-width="0.8"/>
+<text x="48.0" y="1758.0" font-size="12" fill="#222">Inductor L1 22 µH: not polarised.</text>
+<rect x="24.0" y="1767.0" width="14" height="14" rx="2" fill="#868e96" stroke="#222" stroke-width="0.8"/>
+<text x="48.0" y="1778.0" font-size="12" fill="#222">Two female header rows for the ESP32 module (J1, J2). Pink dot = pin 1 (the module&#x27;s USB end) and pin 15 (the antenna end).</text>
+<rect x="24.0" y="1787.0" width="14" height="14" rx="2" fill="#e8590c" stroke="#222" stroke-width="0.8"/>
+<text x="48.0" y="1798.0" font-size="12" fill="#222">Battery connector JBAT: + (red wire from the battery holder) and − (black wire). Reversed polarity can damage the circuit.</text>
+<rect x="24.0" y="1807.0" width="14" height="14" rx="2" fill="#5c7cfa" stroke="#222" stroke-width="0.8"/>
+<text x="48.0" y="1818.0" font-size="12" fill="#222">Power slide switch SW_MAIN.</text>
+<rect x="24.0" y="1827.0" width="14" height="14" rx="2" fill="#1c3d6e" stroke="#222" stroke-width="0.8"/>
+<text x="48.0" y="1838.0" font-size="12" fill="#222">Electrolytic capacitor CRES 470 µF 16 V: polarised. White stripe on the body = NEGATIVE (−) pin. Longer leg = positive (+).</text>
+<text x="48.0" y="1858.0" font-size="12" fill="#222">The + mark is on pad 1.</text>
+<text x="24.0" y="1878.0" font-size="12" fill="#c92a2a">•</text>
+<text x="48.0" y="1878.0" font-size="12" fill="#222">Suggested soldering order: 1) resistors, ceramic capacitors  2) diodes, transistors  3) ICs, inductor, 22 µF capacitors  4)</text>
+<text x="48.0" y="1898.0" font-size="12" fill="#222">through-hole parts.</text>
+<text x="24.0" y="1918.0" font-size="12" fill="#c92a2a">•</text>
+<text x="48.0" y="1918.0" font-size="12" fill="#222">Small grey dots and small empty circles are test pads; leave them empty. The dashed ring around each screw hole marks an area with</text>
+<text x="48.0" y="1938.0" font-size="12" fill="#222">no copper.</text>
 </svg>

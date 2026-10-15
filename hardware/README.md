@@ -40,7 +40,7 @@ Still to measure: idle current, 3.3 V ripple and droop during radio bursts, boos
 
 | Path | Contents |
 |---|---|
-| [`docs/tai-lieu-thiet-ke-phan-cung.md`](docs/tai-lieu-thiet-ke-phan-cung.md) | Design document in Vietnamese: operating principle, calculations per block, ESP32 pin map, BOM with purchase links, test results |
+| [`docs/design-document.md`](docs/design-document.md) | Design document: operating principle, calculations per block, ESP32 pin map, BOM with purchase links, test results |
 | [`schematic/`](schematic/) | Schematic per sheet, as PDF and PNG. `quiz_remote` is the root sheet; M1 to M6 are the functional blocks |
 | [`compact/`](compact/) | 52 × 90 mm board: KiCad project, Gerber files, routing files, board images in `exports/`, `bom.csv` |
 | [`tools/`](tools/) | Board build scripts, documentation export, power simulation, Wokwi firmware sample |
