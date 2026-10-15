@@ -13,9 +13,7 @@
 ![KiCad](https://img.shields.io/badge/KiCad-10-314CB0?logo=kicad&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-<img src="hardware/compact/exports/pcb-front.png" alt="PCB front" width="260">&nbsp;&nbsp;&nbsp;<img src="hardware/compact/exports/pcb-back.png" alt="PCB back" width="260">
-
-*The 52 × 90 mm two-layer board, front and back.*
+<img src="docs/images/hero.jpg" alt="The ClassPulse pad showing a score of 10 next to the live presentation screen" width="900">
 
 </div>
 
@@ -33,6 +31,44 @@ Every student holds a small pad with 16 keys and two 7-segment digits. The teach
 | 📊 **Live results** | Answer counts and the A–D distribution update in real time; correct answers stay hidden until the question closes |
 | 🧮 **Item analysis** | Difficulty, discrimination index, distractor effectiveness and KR-20 reliability after every session |
 | 📥 **Question import** | Word, Excel, PDF and TXT, with optional AI help to write and review questions |
+
+## The device
+
+<table>
+<tr>
+<td align="center" width="28%"><img src="docs/images/device-front.jpg" alt="Pad standing upright, showing a score of 10" height="330"></td>
+<td align="center" width="44%"><img src="docs/images/device-top.jpg" alt="Pad lying flat, keys labelled 0–9, A–D, * and Enter" width="400"></td>
+<td align="center" width="28%"><img src="docs/images/device-inside.jpg" alt="Open enclosure: PCB with the ESP32 module and the AAA battery holder" height="330"></td>
+</tr>
+<tr>
+<td align="center"><sub>Showing a final score of 10</sub></td>
+<td align="center"><sub>3D-printed enclosure, 16 keys, two 7-segment digits</sub></td>
+<td align="center"><sub>Inside: the PCB and the 2 × AAA holder</sub></td>
+</tr>
+</table>
+
+## The teacher app
+
+<table>
+<tr>
+<td width="50%"><img src="docs/images/presentation.png" alt="Presentation view: question, options, explanation and the live A–D chart"></td>
+<td width="50%"><img src="docs/images/dashboard.png" alt="Teacher dashboard with question sets, sessions and students"></td>
+</tr>
+<tr>
+<td align="center"><sub>Presentation view after a question closes: correct answer, explanation and the A–D chart</sub></td>
+<td align="center"><sub>Dashboard: question sets, AI assistant, exams, classes and session history</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/images/session.png" alt="Session control page with the room code, the current question and the live participant list"></td>
+<td width="50%"><img src="docs/images/report.png" alt="End-of-session report with participants, questions, answers and the average score"></td>
+</tr>
+<tr>
+<td align="center"><sub>Session control: room code, question controls and every student's status in real time</sub></td>
+<td align="center"><sub>End-of-session report: participation, accuracy and per-question results, with CSV export</sub></td>
+</tr>
+</table>
+
+The interface is in Vietnamese.
 
 ## How it works
 
@@ -97,6 +133,8 @@ sequenceDiagram
 
 </td></tr>
 </table>
+
+<p align="center"><img src="hardware/compact/exports/pcb-front.png" alt="PCB front" width="220">&nbsp;&nbsp;&nbsp;<img src="hardware/compact/exports/pcb-back.png" alt="PCB back" width="220"><br><sub>The 52 × 90 mm two-layer board, front and back.</sub></p>
 
 Schematic sheets, PCB, Gerber files, BOM and the full design rationale are in [`hardware/`](hardware/README.md) and the [design document](hardware/docs/design-document.md).
 
