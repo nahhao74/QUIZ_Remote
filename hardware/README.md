@@ -1,6 +1,6 @@
 # Quiz Remote
 
-A battery-powered handheld answer buzzer built around an ESP32. It has sixteen keys, two 7-segment digits and an ESP-NOW radio, and runs on two AAA cells. No part of the circuit draws power while idle: a key press wakes it, the ESP32 holds its own power while it works, and then it switches the whole board off.
+A battery-powered handheld answer buzzer built around an ESP32. It has sixteen keys, two 7-segment digits and Wi-Fi (it talks MQTT to the ClassPulse server in [`web/`](../web/README.md)), and runs on two AAA cells. No part of the circuit draws power while idle: a key press wakes it, the ESP32 holds its own power while it works, and then it switches the whole board off.
 
 | Front | Back |
 |---|---|
@@ -26,7 +26,7 @@ A battery-powered handheld answer buzzer built around an ESP32. It has sixteen k
 
 ## Status
 
-The design has been checked on a computer. It has not been assembled or measured yet.
+The board has been assembled and runs the [ClassPulse firmware](../firmware/ClassPulseQuizDevice/README.md). On 2026-10-14 it completed a full quiz over Wi-Fi/MQTT on two AAA cells, with the radio set to 8.5 dBm and the CPU to 80 MHz. The checks below were done on a computer before assembly.
 
 | Check | Result |
 |---|---|

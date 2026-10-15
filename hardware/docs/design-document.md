@@ -5,7 +5,7 @@
 | Version | 1.2 |
 | Date | 2026-10-15 |
 | Scope | Schematic and PCB in `hardware/compact/` |
-| Status | Checked with ERC, DRC and simulation; **not yet assembled or measured on a real board** |
+| Status | Checked with ERC, DRC and simulation; **assembled and running the ClassPulse firmware over Wi-Fi/MQTT** (full quiz completed on 2026-10-14). Idle current and battery life not yet measured |
 
 ## Contents
 
@@ -255,7 +255,7 @@ Total from the "Order qty" column, excluding AAA cells and shipping: about **315
 
 ## 7. Test results
 
-All items below were checked on a computer. No measurement has been made on the real board yet.
+Sections 7.1 to 7.3 were checked on a computer before assembly. The assembled board has since completed a full quiz over Wi-Fi/MQTT on two AAA cells (2026-10-14), with the Wi-Fi transmit power set to 8.5 dBm and the CPU to 80 MHz. The bench measurements listed in section 8 are still open.
 
 ### 7.1. Rule checks (rerun 2026-10-03)
 
