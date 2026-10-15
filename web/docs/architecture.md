@@ -1,13 +1,13 @@
-# Kiến trúc ClassPulse MVP
+# ClassPulse MVP architecture
 
-ClassPulse dùng một backend NestJS làm nguồn dữ liệu nghiệp vụ duy nhất. Web giáo viên điều khiển qua REST và nhận snapshot qua Socket.IO; thiết bị gửi join/answer/status qua EMQX. PostgreSQL giữ trạng thái phiên, deadline, participant, đáp án hiện hành và kết quả xử lý MQTT.
+ClassPulse uses a single NestJS backend as the only source of business data. The teacher web app controls it through REST and receives snapshots through Socket.IO; devices send join/answer/status through EMQX. PostgreSQL holds the session state, the deadlines, the participants, the current answers and the results of MQTT processing.
 
 ```mermaid
 flowchart LR
-  T[Web giáo viên / trình chiếu] -->|REST + JWT| B[NestJS]
-  C[Điện thoại cấu hình] -->|BLE GATT mã hóa| D[ESP32]
-  D -->|MQTT QoS 1 qua Wi-Fi| M[EMQX]
-  S[Web simulator / script tải] -->|MQTT QoS 1| M
+  T[Teacher web / presentation] -->|REST + JWT| B[NestJS]
+  C[Configuration phone] -->|encrypted BLE GATT| D[ESP32]
+  D -->|MQTT QoS 1 over Wi-Fi| M[EMQX]
+  S[Web simulator / load script] -->|MQTT QoS 1| M
   M -->|join / answer / status| B
   B -->|transaction| P[(PostgreSQL / Prisma)]
   B -->|ACK + retained RoomState| M
@@ -15,133 +15,133 @@ flowchart LR
   B -->|Socket.IO session:update| T
 ```
 
-Web giáo viên không kết nối MQTT. Route `/device-simulator` là client thiết bị riêng: dùng MQTT over WebSocket với tài khoản giới hạn quyền và không gọi API để nộp đáp án. Route trình chiếu vẫn cần đăng nhập bằng tài khoản sở hữu phiên; không có đường dẫn công khai bỏ qua xác thực.
+The teacher web app does not connect to MQTT. The `/device-simulator` route is a separate device client: it uses MQTT over WebSocket with a permission-limited account and does not call the API to submit answers. The presentation route still requires logging in with the account that owns the session; there is no public path that skips authentication.
 
-## Bố cục mã nguồn
+## Source layout
 
-| Đường dẫn | Trách nhiệm |
+| Path | Responsibility |
 |---|---|
-| `apps/backend/src/auth.ts`, `dto.ts`, `http.ts` | Tài khoản, xác thực, validation, lỗi, rate limit và health |
-| `apps/backend/src/quizzes.ts` | Quiz/câu hỏi thuộc từng giáo viên; xóa mềm; kiểm tra khóa đáp án theo loại câu |
-| `apps/backend/src/extract.ts`, `imports.ts` | Đọc Word (XML gốc, giữ định dạng đánh dấu đáp án), PDF (unpdf), Excel/CSV; nhập câu hỏi, file mẫu, nhận dạng bằng AI |
-| `apps/backend/src/ai.ts`, `ai-providers.ts` | Chọn nguồn AI (Gemini, Ollama, Claude), structured output qua streaming theo JSON Schema, hàng đợi AiJob chạy nền |
-| `apps/backend/src/sections.ts`, `generation.ts` | Tách chương tài liệu, tạo câu hỏi theo lô và tỷ lệ độ khó, hàng chờ duyệt |
-| `apps/backend/src/bank.ts`, `quality.ts`, `analytics.ts` | Ngân hàng câu hỏi/trùng lặp, đánh giá chất lượng đề, phân tích kết quả và nhận xét AI |
-| `apps/backend/src/classes.ts`, `exams.ts` | Lớp học/danh sách sinh viên, kỳ thi, mã đề, đề in, thống kê điểm theo lớp |
-| `apps/backend/src/sessions.ts` | Snapshot, máy trạng thái, deadline, điều khiển và khôi phục timer |
-| `apps/backend/src/mqtt.ts` | Subscriber, validation, transaction, idempotency, ACK và retained state |
-| `apps/backend/src/events.ts`, `realtime.ts` | Tuần tự hóa broadcast từng phiên và Socket.IO |
-| `apps/backend/prisma` | Schema, migration, seed |
-| `apps/frontend` | React 18 + TypeScript + Vite + Tailwind, giao diện giáo viên/trình chiếu |
-| `apps/device-simulator` | Component React dùng mqtt.js, keypad vật lý và LED 7 đoạn |
-| `apps/firmware` | ESP-IDF: keypad, hai display 74HC595, LED trạng thái, BLE provisioning, Wi-Fi, MQTT QoS 1, ACK/retry/NVS |
-| `packages/shared-types` | Kiểu API, khóa đáp án nhiều lựa chọn, thống kê, trình đọc câu hỏi dạng văn bản, so khớp trùng lặp, phân tích câu hỏi, sinh mã đề |
-| `packages/mqtt-contracts` | Topic v1, Zod schemas, ACK và RoomState |
-| `scripts/simulate-devices` | Tải nhiều thiết bị qua MQTT thật |
-| `infra`, `docker-compose.yml` | Image, proxy Nginx, auth/ACL EMQX và persistent volumes |
+| `apps/backend/src/auth.ts`, `dto.ts`, `http.ts` | Accounts, authentication, validation, errors, rate limiting and health |
+| `apps/backend/src/quizzes.ts` | Each teacher's quizzes/questions; soft delete; checking the answer key by question type |
+| `apps/backend/src/extract.ts`, `imports.ts` | Reading Word (raw XML, keeping the formatting that marks answers), PDF (unpdf), Excel/CSV; question import, sample files, AI recognition |
+| `apps/backend/src/ai.ts`, `ai-providers.ts` | Choosing the AI source (Gemini, Ollama, Claude), structured output through streaming with a JSON Schema, a background AiJob queue |
+| `apps/backend/src/sections.ts`, `generation.ts` | Splitting a document into chapters, generating questions in batches by difficulty ratio, the pending-review queue |
+| `apps/backend/src/bank.ts`, `quality.ts`, `analytics.ts` | The question bank/duplicates, paper quality review, result analysis and AI commentary |
+| `apps/backend/src/classes.ts`, `exams.ts` | Classes/student lists, exams, paper codes, printed papers, per-class score statistics |
+| `apps/backend/src/sessions.ts` | Snapshots, the state machine, deadlines, control and timer recovery |
+| `apps/backend/src/mqtt.ts` | Subscriber, validation, transactions, idempotency, ACK and retained state |
+| `apps/backend/src/events.ts`, `realtime.ts` | Serialising the broadcasts of each session, and Socket.IO |
+| `apps/backend/prisma` | Schema, migrations, seed |
+| `apps/frontend` | React 18 + TypeScript + Vite + Tailwind, the teacher/presentation interface |
+| `apps/device-simulator` | A React component using mqtt.js, a physical keypad and 7-segment LEDs |
+| `apps/firmware` | ESP-IDF: keypad, two 74HC595 displays, status LEDs, BLE provisioning, Wi-Fi, MQTT QoS 1, ACK/retry/NVS |
+| `packages/shared-types` | API types, multi-choice answer keys, statistics, the text question reader, duplicate matching, question analysis, paper code generation |
+| `packages/mqtt-contracts` | v1 topics, Zod schemas, ACK and RoomState |
+| `scripts/simulate-devices` | Load from many devices through a real MQTT broker |
+| `infra`, `docker-compose.yml` | Images, the Nginx proxy, EMQX auth/ACL and persistent volumes |
 
-## Dữ liệu và các bất biến
+## Data and invariants
 
-| Bảng | Vai trò / ràng buộc |
+| Table | Role / constraints |
 |---|---|
-| `Teacher` | Email unique; chỉ lưu bcrypt password hash |
-| `RefreshToken` | SHA-256 token hash unique, familyId, thời hạn và revokedAt |
-| `Quiz`, `Question` | Tài liệu gốc thuộc giáo viên; deletedAt để không làm mất lịch sử |
-| `QuizSession` | Chủ sở hữu, mã phòng, trạng thái, mode, deadline và chỉ số câu hiện tại |
-| `SessionQuestion` | Bản sao nội dung/đáp án khi tạo phiên, unique `(sessionId, order)` |
+| `Teacher` | Unique email; stores only a bcrypt password hash |
+| `RefreshToken` | Unique SHA-256 token hash, familyId, expiry and revokedAt |
+| `Quiz`, `Question` | The teacher's original documents; deletedAt so history is not lost |
+| `QuizSession` | Owner, room code, state, mode, deadlines and the current question index |
+| `SessionQuestion` | A copy of the content/answers made when the session is created, unique `(sessionId, order)` |
 | `Device` | deviceId, online, lastSeenAt |
-| `SessionParticipant` | Unique `(sessionId, deviceId)` và `(sessionId, studentCode)` |
-| `Answer` | Một đáp án hiện hành cho `(participantId, questionId)`, sequence, timestamp client/server |
-| `ProcessedMqttMessage` | requestId UUID primary key, deviceId/action, hash payload và ACK đã xử lý |
-| `SourceDocument` | Tài liệu nguồn cho AI: văn bản đã trích, danh sách chương; giữ file gốc chỉ với PDF scan |
-| `AiJob` | Tác vụ AI: loại, trạng thái, tiến độ, input/result JSON, số token |
-| `GeneratedQuestion` | Câu AI đề xuất chờ duyệt (PENDING/APPROVED/REJECTED) và câu hỏi đã tạo khi duyệt |
-| `Classroom`, `Student` | Lớp của giáo viên; mã thiết bị 2 chữ số unique trong lớp |
-| `Exam`, `ExamQuestion`, `ExamVariant` | Kỳ thi, bản sao câu hỏi lúc tạo kỳ thi, thứ tự câu/phương án của từng mã đề |
+| `SessionParticipant` | Unique `(sessionId, deviceId)` and `(sessionId, studentCode)` |
+| `Answer` | One current answer per `(participantId, questionId)`, sequence, client/server timestamps |
+| `ProcessedMqttMessage` | requestId UUID primary key, deviceId/action, the payload hash and the ACK that was processed |
+| `SourceDocument` | The source document for the AI: the extracted text and the list of chapters; the original file is kept only for scanned PDFs |
+| `AiJob` | An AI task: kind, state, progress, input/result JSON, token counts |
+| `GeneratedQuestion` | A question proposed by the AI and waiting for review (PENDING/APPROVED/REJECTED), plus the question created on approval |
+| `Classroom`, `Student` | A teacher's class; a 2-digit device code that is unique within the class |
+| `Exam`, `ExamQuestion`, `ExamVariant` | An exam, the copy of the questions made when the exam was created, and the order of questions/options for each paper code |
 
-Migration SQL bổ sung partial unique index cho `roomCode` khi status khác `FINISHED`; mã chỉ được tái sử dụng sau khi phiên trước kết thúc. Có CHECK mã phòng 6 số, thời gian câu hỏi 5–3600 giây và sequence dương. Không thay migration bằng `prisma db push`, vì partial index/SQL constraints là một phần bảo đảm dữ liệu.
+The SQL migration adds a partial unique index on `roomCode` when the status is not `FINISHED`; a code can only be reused after the previous session has finished. There are CHECK constraints for a 6-digit room code, a question time of 5–3600 seconds and a positive sequence. Do not replace the migrations with `prisma db push`, because the partial index/SQL constraints are part of the data guarantees.
 
-`correctAnswer` (Question, SessionQuestion, ExamQuestion) và `Answer.answer` là khóa chuẩn A–D theo thứ tự chữ cái (`B`, `AC`); CHECK constraint bảo đảm khóa hợp lệ và câu `SINGLE` chỉ có một chữ. Câu nhiều đáp án chấm kiểu đúng-tất-cả: so sánh nguyên khóa.
+`correctAnswer` (Question, SessionQuestion, ExamQuestion) and `Answer.answer` are canonical A–D keys in alphabetical order (`B`, `AC`); a CHECK constraint ensures the key is valid and that a `SINGLE` question has only one letter. A multiple-answer question is graded all-or-nothing: the whole key is compared.
 
-Session sao chép quiz thành `SessionQuestion` với UUID mới. Vì thế sửa/xóa quiz không thay đổi câu đã dùng trong phiên và báo cáo cũ. `questionId` trong MQTT là UUID của **SessionQuestion**, lấy từ snapshot, không phải UUID của Question gốc. Một câu đã mở không được mở lại trong cùng phiên; tạo phiên mới nếu muốn làm lại bài.
+A session copies the quiz into `SessionQuestion` rows with new UUIDs. Editing or deleting the quiz therefore does not change questions already used in a session or old reports. The `questionId` in MQTT is the UUID of the **SessionQuestion**, taken from the snapshot, not the UUID of the original Question. A question that has been opened cannot be opened again in the same session; create a new session to do the exercise again.
 
-Đáp án hợp lệ mới cập nhật bản ghi Answer hiện hành; thống kê không cộng các lần đổi đáp án. ProcessedMqttMessage giữ dấu vết request, hash và ACK nhưng không lưu toàn bộ nội dung các phiên bản đáp án. MVP chưa có bảng audit đầy đủ cho từng lần đổi lựa chọn.
+A valid answer only updates the current Answer record; the statistics do not add up changes of answer. ProcessedMqttMessage keeps a trace of the request, the hash and the ACK but does not store the full content of every version of an answer. The MVP has no full audit table for each change of choice.
 
-## Luồng ghi MQTT và xử lý đồng thời
+## The MQTT write path and concurrency
 
-1. Subscriber nhận topic chính xác `quiz/v1/devices/{id}/join|answer|status`. Topic ngoài mẫu bị bỏ qua; payload trên 8192 byte, JSON sai hoặc schema sai bị từ chối.
-2. Zod kiểm tra các trường, UUID, mã phòng, enum, sequence; deviceId trong payload phải khớp topic. ACL broker đã giới hạn topic theo danh tính trước khi message tới subscriber.
-3. Trong transaction PostgreSQL, khóa advisory theo hash của requestId trước khi đọc ProcessedMqttMessage. Hai bản gửi QoS 1 cùng lúc vì vậy không cùng áp dụng thao tác.
-4. Nếu requestId tồn tại, so khớp deviceId, action và SHA-256 của payload chuẩn hóa thứ tự trường. Payload khác dùng lại requestId trả `INVALID_PAYLOAD`. Payload giống trả `DUPLICATE_MESSAGE` với `success` và `originalCode` của lần đầu.
-5. Khóa hàng QuizSession bằng `SELECT ... FOR UPDATE`, đọc lại trạng thái rồi mới lấy thời gian server. Khóa này cũng được dùng bởi thao tác giáo viên và timer, tránh answer chạy đua với đóng/chuyển câu.
-6. Join kiểm tra ánh xạ thiết bị/sinh viên. Answer kiểm tra participant, trạng thái, questionId, deadline và sequence lớn hơn đáp án hiện hành. Ghi Answer cùng bản ghi ProcessedMqttMessage/ACK trong một transaction.
-7. Sau commit mới gửi ACK ứng dụng QoS 1 và phát sự kiện cập nhật. HTTP/PUBACK của broker không đồng nghĩa đáp án đã được lưu; thiết bị chờ ACK ứng dụng theo requestId.
+1. The subscriber receives the exact topics `quiz/v1/devices/{id}/join|answer|status`. Topics outside the pattern are ignored; a payload over 8192 bytes, invalid JSON or an invalid schema is rejected.
+2. Zod checks the fields, UUIDs, the room code, enums and the sequence; the deviceId in the payload must match the topic. The broker ACL has already limited the topics by identity before a message reaches the subscriber.
+3. Inside a PostgreSQL transaction, an advisory lock on the hash of the requestId is taken before ProcessedMqttMessage is read. Two QoS 1 deliveries at the same moment therefore never apply the operation twice.
+4. If the requestId exists, the deviceId, the action and the SHA-256 of the field-order-normalised payload are compared. A different payload reusing the requestId returns `INVALID_PAYLOAD`. An identical payload returns `DUPLICATE_MESSAGE` with the `success` and `originalCode` of the first time.
+5. The QuizSession row is locked with `SELECT ... FOR UPDATE`, the state is read again and only then is the server time taken. The same lock is used by teacher actions and the timer, so an answer cannot race with closing or advancing a question.
+6. Join checks the device/student mapping. Answer checks the participant, the state, the questionId, the deadline and that the sequence is greater than the current answer's. The Answer and the ProcessedMqttMessage/ACK record are written in one transaction.
+7. Only after the commit is the QoS 1 application ACK sent and the update event emitted. The broker's HTTP/PUBACK does not mean the answer was stored; the device waits for the application ACK by requestId.
 
-Giới hạn chờ/transaction của xử lý MQTT là 15 giây. ACK `SERVER_ERROR` được trả khi pipeline gặp lỗi và không coi đó là kết quả đã commit. Retry cùng requestId khôi phục kết quả nếu backend đã commit nhưng mất ACK. Bản tin cũ có sequence thấp hơn không ghi đè lựa chọn mới.
+The wait/transaction limit of MQTT processing is 15 seconds. A `SERVER_ERROR` ACK is returned when the pipeline fails, and it is not treated as a committed result. A retry with the same requestId recovers the result if the backend committed but lost the ACK. An old message with a lower sequence does not overwrite a newer choice.
 
-## Timer, reload và khởi động lại
+## Timer, reload and restart
 
 ```mermaid
 stateDiagram-v2
   [*] --> LOBBY
   LOBBY --> QUESTION_ACTIVE: start / open
   QUESTION_ACTIVE --> QUESTION_CLOSED: close / deadline
-  QUESTION_CLOSED --> QUESTION_ACTIVE: next / TIMER sau 3 giây
-  QUESTION_ACTIVE --> QUESTION_ACTIVE: next / open câu chưa mở
-  QUESTION_ACTIVE --> FINISHED: finish / next sau câu cuối
-  QUESTION_CLOSED --> FINISHED: finish / hết câu
+  QUESTION_CLOSED --> QUESTION_ACTIVE: next / TIMER after 3 seconds
+  QUESTION_ACTIVE --> QUESTION_ACTIVE: next / open an unopened question
+  QUESTION_ACTIVE --> FINISHED: finish / next after the last question
+  QUESTION_CLOSED --> FINISHED: finish / out of questions
   LOBBY --> FINISHED: finish
 ```
 
-Server lưu `questionStartedAt`, `questionEndsAt`, `nextQuestionAt`. Khi mở câu, deadline = thời gian server hiện tại + thời lượng override của session hoặc thời lượng câu. Đổi thời lượng trong settings chỉ áp dụng cho câu mở sau đó, không sửa deadline đang chạy.
+The server stores `questionStartedAt`, `questionEndsAt` and `nextQuestionAt`. When a question opens, deadline = current server time + the session's override duration or the question's duration. Changing the duration in settings only applies to questions opened afterwards and does not edit a running deadline.
 
-Vòng quét mỗi **250 ms**, có chặn tick chồng nhau, tìm phiên đã tới deadline và khóa/đọc lại trước khi chuyển trạng thái. Cả MANUAL lẫn TIMER đều đóng nhận đáp án khi hết giờ. MANUAL chờ giáo viên next; TIMER đặt `nextQuestionAt` bằng thời điểm đóng + **3 giây**, rồi mở câu tiếp hoặc finish.
+A sweep runs every **250 ms**, with protection against overlapping ticks; it finds sessions that reached their deadline and locks/rereads before changing state. Both MANUAL and TIMER stop accepting answers when time is up. MANUAL waits for the teacher to press next; TIMER sets `nextQuestionAt` to the closing time + **3 seconds**, then opens the next question or finishes.
 
-Backend gọi một tick ngay khi khởi động. Nếu đã quá giờ trong lúc backend dừng, câu đang mở được đóng khi phục hồi; TIMER vẫn dành 3 giây công bố kết quả tính từ lúc đóng được phục hồi, không tua qua toàn bộ các câu bị bỏ lỡ. Đáp án đến sau deadline vẫn bị từ chối ngay trong transaction, kể cả tick chưa kịp đổi trạng thái.
+The backend runs one tick immediately at startup. If the deadline passed while the backend was down, the open question is closed on recovery; TIMER still gives 3 seconds to show the result counted from the recovered closing time, and does not fast-forward through all the questions that were missed. An answer that arrives after the deadline is still rejected inside the transaction, even if the tick has not yet changed the state.
 
-Web reload lấy lại snapshot REST, join Socket.IO rồi nhận snapshot mới. Countdown được tính từ `questionEndsAt` và `serverTime`, sau đó nội suy bằng đồng hồ đơn điệu trong trình duyệt. Countdown chỉ phục vụ hiển thị; browser không quyết định quyền nộp bài. Khi mất Socket, web còn tải lại REST định kỳ 5 giây nếu tab đang hiển thị. Khi broker kết nối lại, backend subscribe lại và phát retained snapshot cho các phiên chưa kết thúc.
+When the web app reloads it fetches the REST snapshot again, joins Socket.IO and then receives a new snapshot. The countdown is computed from `questionEndsAt` and `serverTime`, then interpolated with the browser's monotonic clock. The countdown is for display only; the browser does not decide whether a submission is allowed. When the socket is down the web app also reloads REST periodically every 5 seconds while the tab is visible. When the broker reconnects, the backend subscribes again and republishes the retained snapshot for sessions that have not finished.
 
-## Snapshot, thống kê và bảo vệ đáp án
+## Snapshots, statistics and answer protection
 
-Snapshot được đọc trong transaction `RepeatableRead` để câu hỏi, participant và answer nhất quán. Các broadcast của cùng một session nối tiếp nhau trong SessionEvents; frontend bỏ snapshot có `serverTime` cũ hơn bản đã nhận.
+A snapshot is read inside a `RepeatableRead` transaction so the question, participants and answers are consistent. Broadcasts for the same session run one after another in SessionEvents; the frontend drops a snapshot whose `serverTime` is older than the one it already received.
 
-Khi `QUESTION_ACTIVE`, currentQuestion không có `correctAnswer`; participant chỉ có `answered`, không có `answer`/`isCorrect`. Tổng số và phân phối A/B/C/D vẫn có để giáo viên quan sát. Các chỉ số đúng/sai lúc này bằng 0 vì đáp án chưa được công bố. Sau đóng câu/finish, các trường đáp án được trả; `results` chứa các câu đã có closedAt.
+While `QUESTION_ACTIVE`, currentQuestion has no `correctAnswer`; a participant only has `answered`, with no `answer`/`isCorrect`. The totals and the A/B/C/D distribution are still present so the teacher can watch. The correct/incorrect figures are 0 at this point because the answer has not been published. After the question closes/finish, the answer fields are returned; `results` contains the questions that have a closedAt.
 
-Phần trăm A/B/C/D và đúng/sai lấy số **đã trả lời** làm mẫu số, làm tròn 2 chữ số. Khi chưa có đáp án, mọi phần trăm bằng 0. `unanswered = max(0, participantCount - answered)`. Participant mới join giữa phiên được tính trong tổng participant hiện tại, kể cả khi xem thống kê các câu trước.
+The A/B/C/D and correct/incorrect percentages use the number **answered** as the denominator, rounded to 2 digits. With no answers, every percentage is 0. `unanswered = max(0, participantCount - answered)`. A participant who joins mid-session counts in the current participant total, even when viewing the statistics of earlier questions.
 
-## Xác thực HTTP và realtime
+## HTTP and realtime authentication
 
-- Mật khẩu bcrypt cost 12; đăng ký yêu cầu 8–72 ký tự và tối đa 72 byte UTF-8.
-- JWT access token HS256, hạn 15 phút; khóa `JWT_ACCESS_SECRET` tối thiểu 32 ký tự. Web giữ access token trong bộ nhớ, không localStorage.
-- Refresh token ngẫu nhiên 48 byte, hạn 7 ngày; database chỉ lưu SHA-256 hash. Cookie `refreshToken` có HttpOnly, SameSite=Lax, Path=/api/auth; Secure theo `COOKIE_SECURE`.
-- Refresh xoay token và revoke token cũ bằng compare-and-set. Khi phát hiện token đã revoke/hết hạn, revoke các refresh token còn hoạt động trong cùng family. Logout revoke refresh token hiện tại; JWT đã phát hành tồn tại tới khi hết hạn.
-- API của quiz/session luôn lọc theo teacherId đã xác thực; tài nguyên của người khác trả 404. Socket xác thực access token, kiểm tra quyền sở hữu khi join session và ngắt kết nối khi JWT hết hạn.
-- CORS theo `FRONTEND_ORIGIN` (danh sách cách nhau bằng dấu phẩy). Request thay đổi từ Origin ngoài danh sách bị từ chối; client không gửi Origin vẫn cần token tương ứng.
-- Rate limit theo IP trong bộ nhớ: login/register chung 20 request/phút, API còn lại 600/phút theo mặc định. Có `AUTH_RATE_LIMIT`, `API_RATE_LIMIT`; chỉ bật `TRUST_PROXY` khi có proxy tin cậy.
-- HTTP log có requestId/method/path/status/duration; không log request body, password hoặc token. Exception filter không gửi stack/SQL cho client.
+- Passwords use bcrypt at cost 12; registration requires 8–72 characters and at most 72 UTF-8 bytes.
+- The JWT access token is HS256 and valid for 15 minutes; the key `JWT_ACCESS_SECRET` needs at least 32 characters. The web app keeps the access token in memory, not in localStorage.
+- The refresh token is 48 random bytes valid for 7 days; the database only stores its SHA-256 hash. The `refreshToken` cookie is HttpOnly, SameSite=Lax, Path=/api/auth; Secure follows `COOKIE_SECURE`.
+- A refresh rotates the token and revokes the old one with compare-and-set. When a revoked/expired token is detected, the other active refresh tokens in the same family are revoked. Logout revokes the current refresh token; an already issued JWT lives until it expires.
+- The quiz/session API always filters by the authenticated teacherId; another person's resource returns 404. The socket authenticates the access token, checks ownership when joining a session and disconnects when the JWT expires.
+- CORS follows `FRONTEND_ORIGIN` (a comma-separated list). A state-changing request from an Origin outside the list is rejected; a client that sends no Origin still needs the corresponding token.
+- The rate limit is per IP in memory: login/register share 20 requests per minute and the rest of the API 600 per minute by default. `AUTH_RATE_LIMIT` and `API_RATE_LIMIT` exist; only turn on `TRUST_PROXY` when there is a trusted proxy.
+- The HTTP log has requestId/method/path/status/duration; it does not log the request body, passwords or tokens. The exception filter does not send stacks/SQL to clients.
 
-## MQTT auth, provisioning và phần cứng
+## MQTT auth, provisioning and hardware
 
-EMQX dùng authentication database có mật khẩu và ACL mặc định deny; anonymous bị từ chối. Backend có credential riêng với quyền subscribe đầu vào thiết bị/publish đầu ra. Simulator phát triển dùng credential chia sẻ và topic ràng buộc `${clientid}`; thông tin quản trị EMQX không nằm trong bundle web.
+EMQX uses a password-based authentication database and a default-deny ACL; anonymous access is refused. The backend has its own credential with permission to subscribe to the device inputs and publish the outputs. The development simulator uses a shared credential and topics bound to `${clientid}`; the EMQX admin credentials are not in the web bundle.
 
-Credential chia sẻ không bảo vệ khỏi việc giả mạo clientId bởi người đã biết mật khẩu. Production dùng `pnpm provision --deviceId=device-001` với `MQTT_DEVICE_PASSWORD` riêng. ACL tài khoản `device-*` ràng buộc topic theo `${username}` đã xác thực; đổi clientId không cấp quyền truy cập thiết bị khác. Tắt credential chia sẻ bằng `MQTT_SIMULATOR_ENABLED=false`. Quyền đọc room state hiện còn dùng `rooms/+`; nếu nội dung lớp cần bảo mật, cần authorization theo phòng. Chi tiết payload/provisioning: [mqtt-protocol.md](mqtt-protocol.md).
+A shared credential does not protect against someone who knows the password forging a clientId. Production uses `pnpm provision --deviceId=device-001` with a separate `MQTT_DEVICE_PASSWORD`. The ACL of `device-*` accounts binds the topics to the authenticated `${username}`; changing the clientId does not grant access to another device. Turn off the shared credential with `MQTT_SIMULATOR_ENABLED=false`. Permission to read the room state still uses `rooms/+`; if the class content needs to be confidential, per-room authorization is required. Payload/provisioning details: [mqtt-protocol.md](mqtt-protocol.md).
 
-Firmware tham chiếu ESP-IDF hỗ trợ ESP32/ESP32-S, Wi-Fi, keypad 4×4 gồm 0–9, A–D, Xóa, Confirm, hai module LED bốn số dùng 74HC595 và hai LED trạng thái. Hai display tạo vùng tám ký tự, dùng chung SCLK/RCLK và có DIO riêng; task keypad có debounce ba mẫu. BLE GATT dùng cho provisioning cục bộ, sau đó dữ liệu quiz đi qua Wi-Fi/MQTT. Wi-Fi modem-sleep và automatic light-sleep duy trì kết nối khi display tắt sau 5 giây. Mã sinh viên trên keypad nhập dạng số; backend vẫn hỗ trợ mã chữ/số. Pinout và mạch thật chưa được xác minh trên PCB; biểu tượng Wi-Fi của web simulator chỉ dùng `navigator.onLine`.
+The reference ESP-IDF firmware supports ESP32/ESP32-S, Wi-Fi, a 4×4 keypad with 0–9, A–D, Clear and Confirm, two four-digit LED modules driven by 74HC595s and two status LEDs. The two displays form an eight-character area, share SCLK/RCLK and have separate DIO lines; the keypad task has three-sample debouncing. BLE GATT is used for local provisioning, after which the quiz data travels over Wi-Fi/MQTT. Wi-Fi modem-sleep and automatic light-sleep keep the connection while the display turns off after 5 seconds. The student code on the keypad is entered as digits; the backend still supports alphanumeric codes. The pinout and the real circuit have not been verified on a PCB; the Wi-Fi icon of the web simulator only uses `navigator.onLine`.
 
-## Vận hành và giới hạn triển khai
+## Operation and deployment limits
 
-Compose khai báo PostgreSQL 17.6, EMQX 5.8.8, bước tạo broker config, backend và frontend/Nginx; simulator nằm trong frontend nên không cần service riêng. Postgres/broker có volume bền vững. Backend đợi health của database/broker; frontend đợi backend. Nginx phục vụ SPA, proxy `/api/`, `/socket.io/`, `/mqtt`; cổng backend/broker/database mặc định chỉ bind localhost, frontend rootless bind `127.0.0.1:8080`. Trình cài localhost dùng Apache đang có sẵn hoặc socket proxy systemd khi cổng 80 còn trống, cho phép dùng `http://localhost` mà không nới quyền bind cổng đặc quyền cho mọi tiến trình người dùng. `localhost` trong cấu hình trình duyệt là máy người dùng, nên triển khai từ xa cần thay hostname và dùng HTTPS/WSS/TLS.
+Compose declares PostgreSQL 17.6, EMQX 5.8.8, a step that creates the broker config, the backend and the frontend/Nginx; the simulator is inside the frontend so it needs no service of its own. Postgres and the broker have persistent volumes. The backend waits for the database/broker health; the frontend waits for the backend. Nginx serves the SPA and proxies `/api/`, `/socket.io/` and `/mqtt`; the backend/broker/database ports bind to localhost by default, and the rootless frontend binds `127.0.0.1:8080`. The localhost installer uses an Apache that is already present, or a systemd socket proxy when port 80 is free, which makes `http://localhost` usable without loosening the privileged-port bind permission for every user process. `localhost` in the browser configuration is the user's own machine, so a remote deployment must change the hostname and use HTTPS/WSS/TLS.
 
-Ứng dụng hiện thiết kế cho **một instance backend**: hàng đợi broadcast, rate limit và Socket.IO room nằm trong bộ nhớ; MQTT clientId backend cố định. PostgreSQL locks bảo vệ ghi nhưng chưa đủ để biến toàn hệ thống thành multi-instance. Khi mở rộng cần event/outbox bền vững, Socket.IO adapter dùng chung, rate limiter dùng chung và chiến lược consumer MQTT/timer phù hợp. Sau crash giữa commit và broadcast, client có thể cần tải lại snapshot; MVP chưa có transactional outbox bảo đảm giao sự kiện.
+The application is currently designed for **one backend instance**: the broadcast queue, the rate limit and the Socket.IO rooms live in memory; the backend's MQTT clientId is fixed. PostgreSQL locks protect writes but are not enough to make the whole system multi-instance. Scaling out needs a durable event/outbox, a shared Socket.IO adapter, a shared rate limiter and a suitable MQTT consumer/timer strategy. After a crash between the commit and the broadcast, clients may need to reload the snapshot; the MVP has no transactional outbox guaranteeing event delivery.
 
-Shutdown NestJS dừng timer, ngừng nhận MQTT mới, chờ tác vụ MQTT đang chạy rồi đóng client và Prisma. Health `/api/health` kiểm tra API, `SELECT 1` và trạng thái kết nối MQTT; khi thiếu một dependency bắt buộc trả 503.
+NestJS shutdown stops the timer, stops accepting new MQTT messages, waits for running MQTT work and then closes the client and Prisma. The `/api/health` health check checks the API, `SELECT 1` and the MQTT connection state; when a required dependency is missing it returns 503.
 
-Môi trường thực thi hiện tại không có Docker nên không có bằng chứng đã chạy Compose/container. Các kiểm thử runtime sử dụng PostgreSQL 18 và EMQX 5.8.8 chạy native. Cấu hình Compose là đường triển khai cung cấp trong repo; xem README/báo cáo kiểm thử để phân biệt kiểm thử đã chạy và phần còn cần xác nhận trên máy có Docker.
+The current execution environment has no Docker, so there is no evidence that Compose/containers were run. The runtime tests use PostgreSQL 18 and EMQX 5.8.8 running natively. The Compose configuration is the deployment path provided in the repository; see the README/test report to tell apart the tests that were run from the parts that still need confirming on a machine with Docker.
 
-## Nhập file, AI và kỳ thi
+## File import, AI and exams
 
-- **Nhập câu hỏi** không lưu gì: backend trả bản nháp kèm cảnh báo, editor đánh dấu câu thiếu dữ liệu và chỉ lưu khi giáo viên bấm Lưu. File Office được kiểm tra kích thước giải nén trước khi mở (chống zip bomb); tối đa 20 MB, 500 trang PDF.
-- **Tác vụ AI** (tạo câu hỏi, nhận dạng tài liệu, đánh giá đề, phân tích kết quả) chạy nền trong `AiJobsService`, tối đa 2 tác vụ đồng thời (AI_MAX_CONCURRENT_JOBS) và 3 tác vụ chưa xong mỗi giáo viên. Web poll `GET /ai/jobs/:id`, nên không phụ thuộc timeout proxy. Mỗi lời gọi dùng structured output: Zod schema được chuyển thành JSON Schema (`responseJsonSchema` với Gemini, `format` với Ollama, output format với Claude), rồi kết quả được kiểm tra lại bằng Zod; các trường dạng liệt kê được chuẩn hóa ở backend để một giá trị lạ không làm hỏng cả tác vụ. Gemini tự thử lại khi gặp 429/5xx (hạn mức theo phút của gói miễn phí). Khi cấu hình cả Gemini/Claude lẫn `OLLAMA_URL`, lời gọi gặp hết hạn mức, quá tải hoặc mất mạng được chuyển sang Ollama và nguồn chính được nghỉ 10 phút; `AiJob.model` ghi lại mô hình thực sự đã trả lời (ví dụ `gemini-3.8-flash + qwen3:4b-instruct`). Tài liệu nguồn được đánh dấu để Claude đọc từ prompt cache ở các lô sau; Ollama nhận JSON Schema cả trong prompt, giới hạn độ dài theo `OLLAMA_NUM_CTX` (tài liệu nhận dạng được chia nhỏ theo ngữ cảnh) và từ chối nội dung quá dài thay vì để mô hình cắt bớt. Kế hoạch tạo câu liệt kê từng câu (độ khó, loại, vị trí đáp án đúng được chia đều A–D) để mô hình nhỏ cũng bám đúng tỷ lệ.
-- **Câu AI đề xuất** nằm trong `GeneratedQuestion` cho tới khi giáo viên duyệt; duyệt sao chép sang `Question` (origin `AI`) trong một transaction.
-- **Trộn đề/xáo trộn đáp án**: `SessionQuestion.optionOrder` (ví dụ `CADB`) ghi phương án gốc ở từng vị trí hiển thị. Khóa đúng, nội dung phương án và tham chiếu "đáp án X" trong lời giải được quy đổi khi tạo phiên; phân tích kết quả quy đổi ngược về phương án gốc. Mã đề của kỳ thi sinh bằng PRNG có seed (ID kỳ thi + mã đề) nên tái lập được; câu có phương án phụ thuộc vị trí không bị đảo phương án.
-- Thiết bị vẫn theo một câu chung trên màn chiếu tại một thời điểm. Mã đề giúp mỗi lớp/buổi có thứ tự câu và đáp án khác nhau, và in được đề giấy theo từng mã.
+- **Question import** stores nothing: the backend returns a draft with warnings, the editor marks questions with missing data and only saves when the teacher presses Save. Office files have their uncompressed size checked before they are opened (zip-bomb protection); at most 20 MB and 500 PDF pages.
+- **AI tasks** (question generation, document recognition, paper review, result analysis) run in the background in `AiJobsService`, with at most 2 at the same time (AI_MAX_CONCURRENT_JOBS) and 3 unfinished tasks per teacher. The web app polls `GET /ai/jobs/:id`, so it does not depend on proxy timeouts. Each call uses structured output: a Zod schema is converted to a JSON Schema (`responseJsonSchema` for Gemini, `format` for Ollama, the output format for Claude), and the result is checked again with Zod; enumerated fields are normalised in the backend so one unexpected value does not break the whole task. Gemini retries by itself on 429/5xx (the per-minute quota of the free tier). When both Gemini/Claude and `OLLAMA_URL` are configured, a call that hits a quota, overload or lost connection is moved to Ollama and the primary source rests for 10 minutes; `AiJob.model` records the model that actually answered (for example `gemini-3.8-flash + qwen3:4b-instruct`). The source document is marked so Claude reads it from the prompt cache in later batches; Ollama receives the JSON Schema inside the prompt too, limits the length according to `OLLAMA_NUM_CTX` (a document being recognised is split by context) and rejects content that is too long instead of letting the model truncate it. The question-generation plan lists each question (difficulty, type, and the position of the correct answer spread evenly over A–D) so even a small model follows the ratios.
+- **AI-proposed questions** stay in `GeneratedQuestion` until the teacher approves them; approving copies them to `Question` (origin `AI`) in one transaction.
+- **Paper shuffle/option shuffle**: `SessionQuestion.optionOrder` (for example `CADB`) records the original option at each displayed position. The correct key, the option text and the "answer X" references in the explanation are converted when the session is created; result analysis converts back to the original options. An exam's paper codes are generated by a seeded PRNG (exam ID + paper code), so they are reproducible; a question whose options depend on position does not have its options swapped.
+- Devices still follow one shared question on the presentation screen at a time. Paper codes give each class/session a different order of questions and answers, and let a paper exam be printed for each code.

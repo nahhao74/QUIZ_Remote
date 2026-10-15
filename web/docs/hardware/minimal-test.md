@@ -1,27 +1,27 @@
-# Thử nhanh với đúng linh kiện hiện có
+# Quick test with the parts you already have
 
-![Pinout ESP32 30 chân và dây thử](esp32-30pin-minimal-wiring.svg)
+![30-pin ESP32 pinout and test wires](esp32-30pin-minimal-wiring.svg)
 
-Cấu hình này chỉ cần ESP32 DevKit 30 pin, keypad 4×4, một LED xanh, một điện trở 330 Ω và hai module LED 4 số dùng 74HC595. Mỗi display có năm chân `VCC`, `GND`, `DIO`, `SCLK`, `RCLK`. Firmware đang mặc định dùng cấu hình này qua `CP_MINIMAL_BREADBOARD_TEST=1` trong `apps/firmware/main/hardware_profile.h`.
+This setup only needs a 30-pin ESP32 DevKit, a 4×4 keypad, one green LED, one 330 Ω resistor and two 4-digit LED modules driven by a 74HC595. Each display has five pins `VCC`, `GND`, `DIO`, `SCLK`, `RCLK`. The firmware uses this setup by default through `CP_MINIMAL_BREADBOARD_TEST=1` in `apps/firmware/main/hardware_profile.h`.
 
-## 1. Thử LED xanh
+## 1. Test the green LED
 
-Ngắt USB trước khi cắm dây:
+Unplug USB before connecting wires:
 
 ```text
-GPIO17 ── 330 Ω ── anode LED xanh
+GPIO17 ── 330 Ω ── green LED anode
                        cathode ── GND
 ```
 
-Chân dài của LED thường là anode; cạnh bẹt trên vỏ thường nằm phía cathode. Điện trở có thể đặt trước hoặc sau LED. Khi khởi động, LED sáng 250 ms để tự kiểm tra. Với sketch thử, xung ngắn 250 ms nghĩa là Wi-Fi online; xung dài 1 giây nghĩa là offline. Firmware hệ thống đầy đủ sẽ dùng trạng thái MQTT và hai màu LED khi đã có đủ linh kiện.
+The long leg of an LED is usually the anode; the flat edge on the casing is usually on the cathode side. The resistor can go before or after the LED. At startup the LED lights for 250 ms as a self-test. In the test sketch, a short 250 ms pulse means Wi-Fi is online and a long 1-second pulse means offline. The full system firmware will use the MQTT state and a two-colour LED once all the parts are available.
 
-GPIO16 dành cho LED đỏ nhưng cứ để hở trong lần thử này.
+GPIO16 is reserved for the red LED but leave it unconnected for this test.
 
-Để kiểm tra phần cứng độc lập với Wi-Fi/MQTT, mở sketch [`ClassPulseHardwareTest.ino`](../../apps/firmware/ClassPulseHardwareTest/ClassPulseHardwareTest.ino) bằng Arduino IDE, chọn board **ESP32 Dev Module**, nạp chương trình rồi mở Serial Monitor ở 115200 baud. Sketch không cần cài thư viện ngoài.
+To test the hardware independently of Wi-Fi/MQTT, open the sketch [`ClassPulseHardwareTest.ino`](../../apps/firmware/ClassPulseHardwareTest/ClassPulseHardwareTest.ino) in the Arduino IDE, choose the board **ESP32 Dev Module**, upload it and then open the Serial Monitor at 115200 baud. The sketch needs no external library.
 
-## 2. Thử keypad không cần điện trở rời
+## 2. Test the keypad without separate resistors
 
-Firmware dùng điện trở kéo xuống nội và chuyển các hàng không quét sang high-impedance:
+The firmware uses the internal pull-down resistors and switches the rows that are not being scanned to high-impedance:
 
 | Keypad | ESP32 |
 |---|---|
@@ -34,15 +34,15 @@ Firmware dùng điện trở kéo xuống nội và chuyển các hàng không q
 | C3 | GPIO23 |
 | C4 | GPIO33 |
 
-Thứ tự tám dây trên keypad có thể khác bảng. Nếu chưa có đồng hồ đo, thử giả định bốn dây đầu là R1–R4 và bốn dây sau là C1–C4. Nếu phím trả về sai vị trí, ngắt USB rồi đổi lại thứ tự dây. Trong giai đoạn thử chỉ nhấn một phím mỗi lần.
+The order of the eight wires on a keypad may differ from this table. If you do not have a multimeter yet, try assuming the first four wires are R1–R4 and the last four are C1–C4. If a key returns the wrong position, unplug USB and swap the wire order. While testing, press only one key at a time.
 
-## 3. Thử display 74HC595
+## 3. Test the 74HC595 displays
 
-`SCLK` dịch từng bit vào 74HC595; `RCLK` chốt dữ liệu vừa dịch ra LED. Vì vậy phải nối cả hai. Hai display dùng chung SCLK/RCLK nhưng có DIO riêng. Cấp module bằng **3,3 V** trong lần thử trực tiếp này.
+`SCLK` shifts each bit into the 74HC595; `RCLK` latches the data just shifted out to the LEDs. Both must therefore be connected. The two displays share SCLK/RCLK but have separate DIO lines. Power the modules from **3.3 V** in this direct test.
 
-Thử từng module riêng trước:
+Test each module on its own first:
 
-| Chân module | DISP1 | DISP2 |
+| Module pin | DISP1 | DISP2 |
 |---|---|---|
 | VCC | ESP32 3V3 | ESP32 3V3 |
 | GND | ESP32 GND | ESP32 GND |
@@ -50,44 +50,44 @@ Thử từng module riêng trước:
 | RCLK | GPIO19 | GPIO19 |
 | DIO | GPIO21 | GPIO22 |
 
-1. Cắm DISP1, cấp USB và kiểm tra `1234`.
-2. Ngắt USB, tháo DISP1 rồi cắm DISP2 theo cột tương ứng và kiểm tra `5678`.
-3. Ngắt USB, cắm đồng thời hai module. Nối chung SCLK vào GPIO18 và chung RCLK vào GPIO19; hai DIO vẫn đi riêng.
+1. Connect DISP1, plug in USB and check `1234`.
+2. Unplug USB, remove DISP1, connect DISP2 in the matching column and check `5678`.
+3. Unplug USB and connect both modules together. Share SCLK on GPIO18 and RCLK on GPIO19; the two DIO lines stay separate.
 
-Sketch thử sẽ hiện `1234` trên DISP1 và `5678` trên DISP2. Nhấn keypad sẽ in ký tự trong Serial Monitor, hiển thị ký tự đó và bật LED xanh một giây. Sau 5 giây không nhấn, display tắt.
+The test sketch shows `1234` on DISP1 and `5678` on DISP2. Pressing the keypad prints the character in the Serial Monitor, shows it and turns the green LED on for one second. After 5 seconds without a press, the displays turn off.
 
-Để thử trạng thái kết nối, sửa hai dòng `WIFI_SSID` và `WIFI_PASSWORD` ở đầu sketch. Khi Wi-Fi online, nhấn phím làm LED xanh chớp 250 ms; khi offline, LED xanh sáng một giây. Đây là quy ước tạm thời vì hiện chưa có LED đỏ. Serial Monitor luôn in rõ `Wi-Fi: ONLINE` hoặc `Wi-Fi: OFFLINE`.
+To test the connection state, edit the two lines `WIFI_SSID` and `WIFI_PASSWORD` at the top of the sketch. When Wi-Fi is online, a key press makes the green LED blink for 250 ms; when offline, the green LED stays on for one second. This is a temporary convention because there is no red LED yet. The Serial Monitor always prints `Wi-Fi: ONLINE` or `Wi-Fi: OFFLINE` clearly.
 
-## 4. Build và nạp bằng Arduino IDE
+## 4. Build and upload with the Arduino IDE
 
-1. Cài Arduino IDE 2.x.
-2. Mở **File → Preferences**, thêm URL sau vào **Additional Boards Manager URLs**:
+1. Install Arduino IDE 2.x.
+2. Open **File → Preferences** and add this URL to **Additional Boards Manager URLs**:
 
    ```text
    https://espressif.github.io/arduino-esp32/package_esp32_index.json
    ```
 
-3. Mở **Tools → Board → Boards Manager**, tìm `esp32`, cài gói **esp32 by Espressif Systems**, rồi khởi động lại IDE.
-4. Mở file `apps/firmware/ClassPulseHardwareTest/ClassPulseHardwareTest.ino`.
-5. Chọn **Tools → Board → ESP32 Arduino → ESP32 Dev Module**. Nếu danh sách có đúng **DOIT ESP32 DEVKIT V1**, có thể chọn mục đó.
-6. Cắm cáp USB dữ liệu và chọn **Tools → Port → /dev/ttyUSB0** hoặc `/dev/ttyACM0`.
-7. Bấm **Verify** để build. Khi báo build thành công, bấm **Upload**.
-8. Nếu IDE dừng ở `Connecting...`, giữ nút **BOOT**, bấm Upload, thả BOOT khi quá trình ghi bắt đầu.
-9. Mở **Tools → Serial Monitor**, chọn **115200 baud**.
+3. Open **Tools → Board → Boards Manager**, search for `esp32`, install the package **esp32 by Espressif Systems** and restart the IDE.
+4. Open the file `apps/firmware/ClassPulseHardwareTest/ClassPulseHardwareTest.ino`.
+5. Choose **Tools → Board → ESP32 Arduino → ESP32 Dev Module**. If the list has exactly **DOIT ESP32 DEVKIT V1**, you can choose that entry.
+6. Plug in a data-capable USB cable and choose **Tools → Port → /dev/ttyUSB0** or `/dev/ttyACM0`.
+7. Press **Verify** to build. When it reports a successful build, press **Upload**.
+8. If the IDE stops at `Connecting...`, hold the **BOOT** button, press Upload and release BOOT when writing starts.
+9. Open **Tools → Serial Monitor** and choose **115200 baud**.
 
-Trên Linux, kiểm tra cổng bằng:
+On Linux, check the port with:
 
 ```bash
 ls /dev/ttyUSB* /dev/ttyACM* 2>/dev/null
 ```
 
-Nếu thấy cổng nhưng Arduino IDE báo `Permission denied`, thêm tài khoản hiện tại vào nhóm serial rồi đăng xuất/đăng nhập lại:
+If you see the port but the Arduino IDE reports `Permission denied`, add your account to the serial group and log out and in again:
 
 ```bash
 sudo usermod -aG dialout "$USER"
 ```
 
-Kết quả mong đợi trên Serial Monitor:
+Expected output on the Serial Monitor:
 
 ```text
 ClassPulse hardware test ready. Press one key at a time.
@@ -96,6 +96,6 @@ Key: A | Wi-Fi: ONLINE
 Displays off after 5 seconds.
 ```
 
-## 5. Khi đã mua đủ linh kiện
+## 5. When you have bought all the parts
 
-Đổi `CP_MINIMAL_BREADBOARD_TEST` thành `0`, sau đó đấu theo [`breadboard-wiring.md`](breadboard-wiring.md). Khi đó keypad quay lại GPIO33/34/35/39 với bốn điện trở 47 kΩ, thêm bốn điện trở hàng 1 kΩ và LED đỏ. Nếu cấp display bằng 5 V, thêm bộ đệm mức 74AHCT125.
+Change `CP_MINIMAL_BREADBOARD_TEST` to `0`, then wire it according to [`breadboard-wiring.md`](breadboard-wiring.md). The keypad then goes back to GPIO33/34/35/39 with four 47 kΩ resistors, plus four 1 kΩ row resistors and the red LED. If the displays are powered from 5 V, add a 74AHCT125 level buffer.

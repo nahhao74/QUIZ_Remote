@@ -1,88 +1,88 @@
-# API và Socket.IO
+# REST API and Socket.IO
 
-Base URL trong môi trường phát triển: `http://localhost:3000/api`; qua frontend/Nginx: `http://localhost/api`. Swagger UI tại `/api/docs`, JSON OpenAPI tại `/api/docs-json`. Các request có body dùng `Content-Type: application/json`.
+Base URL in development: `http://localhost:3000/api`; through the frontend/Nginx: `http://localhost/api`. Swagger UI is at `/api/docs` and the OpenAPI JSON at `/api/docs-json`. Requests with a body use `Content-Type: application/json`.
 
-Tài liệu bám theo controllers/DTO trong `apps/backend/src`. Hầu hết kiểu response dùng chung nằm trong `packages/shared-types`. Không có REST endpoint dành cho sinh viên để nộp đáp án: join/answer dùng [MQTT](mqtt-protocol.md).
+This document follows the controllers/DTOs in `apps/backend/src`. Most shared response types live in `packages/shared-types`. There is no REST endpoint for students to submit answers: join/answer use [MQTT](mqtt-protocol.md).
 
-## Xác thực và cookie
+## Authentication and cookies
 
-Quiz, question, teacher profile và session đều yêu cầu:
+Quizzes, questions, the teacher profile and sessions all require:
 
 ```http
 Authorization: Bearer <accessToken>
 ```
 
-Register/login/refresh trả `AuthResponse`:
+Register/login/refresh return `AuthResponse`:
 
 ```json
 {
-  "accessToken": "<JWT-hạn-15-phút>",
+  "accessToken": "<JWT-valid-15-minutes>",
   "teacher": {
     "id": "b1ec2dad-e578-4975-82ea-f0011142218c",
     "email": "teacher@example.com",
-    "name": "Giáo viên"
+    "name": "Teacher"
   }
 }
 ```
 
-Refresh token không có trong JSON. Server đặt cookie `refreshToken`: HttpOnly, SameSite=Lax, Path=/api/auth, Max-Age 7 ngày, Secure khi `COOKIE_SECURE=true`. Browser gọi fetch với `credentials: 'include'`; client CLI giữ cookie jar. Refresh và logout đọc cookie, không đọc refresh token trong body/Authorization. Mỗi refresh thành công cấp access token mới và xoay cookie.
+The refresh token is not in the JSON. The server sets a `refreshToken` cookie: HttpOnly, SameSite=Lax, Path=/api/auth, Max-Age 7 days, Secure when `COOKIE_SECURE=true`. Browsers call fetch with `credentials: 'include'`; CLI clients keep a cookie jar. Refresh and logout read the cookie, never a refresh token in the body/Authorization. Every successful refresh issues a new access token and rotates the cookie.
 
-| Method / path | Body | Thành công | Lỗi chính |
+| Method / path | Body | Success | Main errors |
 |---|---|---|---|
-| `POST /auth/register` | `{ "email", "password", "name" }` | **201** AuthResponse + cookie | 400 validation/email đã dùng; 409 nếu đụng unique khi ghi đồng thời |
-| `POST /auth/login` | `{ "email", "password" }` | **200** AuthResponse + cookie | 400 validation; 401 sai thông tin |
-| `POST /auth/refresh` | Không cần; gửi cookie | **200** AuthResponse + cookie mới | 401 thiếu, sai, hết hạn hoặc đã dùng token |
-| `POST /auth/logout` | Không cần; gửi cookie nếu có | **200** `{ "success": true }`, xóa cookie | Có thể gọi khi cookie không còn |
-| `GET /teachers/me` | — | **200** `{ id, email, name }` | 401 token không hợp lệ |
-| `PATCH /teachers/me` | `{ "name": "Tên mới" }` | **200** `{ id, email, name }` | 400 validation; 401 |
+| `POST /auth/register` | `{ "email", "password", "name" }` | **201** AuthResponse + cookie | 400 validation/email already used; 409 on a unique clash in concurrent writes |
+| `POST /auth/login` | `{ "email", "password" }` | **200** AuthResponse + cookie | 400 validation; 401 wrong credentials |
+| `POST /auth/refresh` | None; send the cookie | **200** AuthResponse + new cookie | 401 missing, wrong, expired or already-used token |
+| `POST /auth/logout` | None; send the cookie if present | **200** `{ "success": true }`, clears the cookie | Can be called when the cookie is gone |
+| `GET /teachers/me` | — | **200** `{ id, email, name }` | 401 invalid token |
+| `PATCH /teachers/me` | `{ "name": "New name" }` | **200** `{ id, email, name }` | 400 validation; 401 |
 
-Email được trim/lowercase. Đăng ký: email hợp lệ tối đa 254 ký tự; tên sau trim dài 1–100; mật khẩu 8–72 ký tự và không vượt 72 byte UTF-8. Login mật khẩu dài 1–72 ký tự. API hồ sơ hiện chỉ sửa tên, không đổi email/mật khẩu.
+The email is trimmed and lowercased. Registration: a valid email of at most 254 characters; a name of 1–100 characters after trimming; a password of 8–72 characters that does not exceed 72 UTF-8 bytes. Login passwords are 1–72 characters. The profile API currently only changes the name, not the email or password.
 
-Refresh token đã revoke/hết hạn làm các token còn hoạt động cùng family bị revoke. Web gom các request refresh đồng thời thành một request. Logout không thu hồi JWT access token ngay lập tức; token đã phát hành hết hiệu lực sau tối đa 15 phút.
+Using a revoked/expired refresh token revokes the other active tokens of the same family. The web app merges concurrent refresh requests into one. Logout does not revoke the JWT access token immediately; an already issued token stops working after at most 15 minutes.
 
-## Quiz và câu hỏi
+## Quizzes and questions
 
-Mỗi path `:id`/`:questionId` dưới đây phải là UUID. Quiz của người khác hoặc đã xóa mềm trả 404. Danh sách không có pagination/filter; chỉ trả quiz đang hoạt động của giáo viên hiện tại, sắp theo updatedAt giảm dần.
+Every `:id`/`:questionId` path segment below must be a UUID. Another teacher's quiz, or a soft-deleted one, returns 404. The list has no pagination/filter; it only returns the current teacher's active quizzes, sorted by updatedAt descending.
 
-### Request `QuestionInput`
+### The `QuestionInput` request
 
 ```json
 {
-  "content": "Những công nghệ không dây nào có sẵn trên ESP32? Chọn tất cả các đáp án đúng.",
+  "content": "Which wireless technologies are built into the ESP32? Choose all correct answers.",
   "optionA": "Wi-Fi",
   "optionB": "Bluetooth Low Energy",
   "optionC": "5G",
   "optionD": "LoRa",
   "type": "MULTIPLE",
   "correctAnswer": "AB",
-  "explanation": "ESP32 có sẵn Wi-Fi và Bluetooth; 5G và LoRa cần module rời.",
-  "knowledge": "Kết nối không dây của ESP32",
-  "topic": "Chương 2 – Phần cứng IoT",
+  "explanation": "The ESP32 has Wi-Fi and Bluetooth built in; 5G and LoRa need a separate module.",
+  "knowledge": "ESP32 wireless connectivity",
+  "topic": "Chapter 2 – IoT hardware",
   "difficulty": "MEDIUM",
   "durationSeconds": 40,
   "order": 0
 }
 ```
 
-content dài 1–4000 ký tự; mỗi option dài 1–1000; durationSeconds là số nguyên 5–3600; order nguyên 0–1000. Các trường này cùng correctAnswer bắt buộc khi tạo câu.
+`content` is 1–4000 characters; each option is 1–1000; `durationSeconds` is an integer 5–3600; `order` is an integer 0–1000. These fields and `correctAnswer` are required when creating a question.
 
-- `type`: `SINGLE` (mặc định) hoặc `MULTIPLE`. Câu nhiều đáp án cho phép sinh viên chọn nhiều phương án và chỉ được tính đúng khi chọn **đủ và đúng** tất cả đáp án.
-- `correctAnswer` là **khóa chuẩn**: một hoặc nhiều chữ A–D theo thứ tự bảng chữ cái, không lặp (`B`, `AC`, `ABD`). Câu `SINGLE` phải có đúng một chữ; gửi `AB` cho câu một đáp án trả 400. Client cũ gửi `"correctAnswer": "B"` không kèm type vẫn hoạt động như trước.
-- Tùy chọn: `explanation` (lời giải, ≤ 4000, hiển thị cho lớp sau khi đóng câu), `knowledge` (kiến thức được kiểm tra, ≤ 300), `topic` (chương/chủ đề, ≤ 200), `difficulty` (`EASY`/`MEDIUM`/`HARD` hoặc null), `origin` (`MANUAL`/`IMPORT`/`AI`, chỉ để hiển thị nguồn). DTO chấp nhận `id` UUID tùy chọn để tương thích dữ liệu editor, nhưng create sinh UUID mới và update không đổi ID theo body. PATCH câu cho phép tập con các trường này.
+- `type`: `SINGLE` (default) or `MULTIPLE`. A multiple-answer question lets the student choose several options and counts as correct only when **every correct option and nothing else** is chosen.
+- `correctAnswer` is the **canonical key**: one or more letters A–D in alphabetical order, without repeats (`B`, `AC`, `ABD`). A `SINGLE` question must have exactly one letter; sending `AB` for a single-answer question returns 400. An older client that sends `"correctAnswer": "B"` without a type still works as before.
+- Optional: `explanation` (the solution, ≤ 4000, shown to the class after the question closes), `knowledge` (the knowledge tested, ≤ 300), `topic` (chapter/topic, ≤ 200), `difficulty` (`EASY`/`MEDIUM`/`HARD` or null), `origin` (`MANUAL`/`IMPORT`/`AI`, only to show the source). The DTO accepts an optional UUID `id` for compatibility with editor data, but create generates a new UUID and update does not change the ID from the body. PATCH on a question accepts a subset of these fields.
 
-### Request `QuizInput`
+### The `QuizInput` request
 
 ```json
 {
-  "title": "Nhập môn IoT",
-  "description": "Bài kiểm tra nhanh",
+  "title": "Introduction to IoT",
+  "description": "Quick quiz",
   "questions": [
     {
-      "content": "MQTT dùng mô hình giao tiếp nào?",
+      "content": "Which communication model does MQTT use?",
       "optionA": "Publish/subscribe",
-      "optionB": "Chỉ peer-to-peer",
-      "optionC": "Chỉ request/response",
-      "optionD": "Chỉ broadcast UDP",
+      "optionB": "Peer-to-peer only",
+      "optionC": "Request/response only",
+      "optionD": "UDP broadcast only",
       "correctAnswer": "A",
       "durationSeconds": 30,
       "order": 0
@@ -91,27 +91,27 @@ content dài 1–4000 ký tự; mỗi option dài 1–1000; durationSeconds là 
 }
 ```
 
-Title dài 1–200 ký tự, bắt buộc khi tạo. Description tùy chọn, tối đa 4000, mặc định chuỗi rỗng. Questions tùy chọn, tối đa 200 phần tử; có thể tạo quiz rỗng nhưng chưa thể tạo session từ quiz đó. PATCH quiz cho phép tập con; nếu gửi `questions`, **toàn bộ danh sách câu hiện tại được thay thế** bằng các bản ghi mới, bản cũ xóa mềm. Không gửi questions thì giữ danh sách cũ.
+`title` is 1–200 characters and required on creation. `description` is optional, at most 4000, and defaults to an empty string. `questions` is optional, at most 200 items; an empty quiz can be created but no session can be created from it yet. PATCH on a quiz accepts a subset; if `questions` is sent, **the whole current list of questions is replaced** by the new records and the old ones are soft-deleted. If `questions` is not sent the old list is kept.
 
-| Method / path | Body | Thành công |
+| Method / path | Body | Success |
 |---|---|---|
 | `GET /quizzes` | — | **200** QuizRecord[] |
 | `POST /quizzes` | QuizInput | **201** QuizRecord |
-| `GET /quizzes/:id` | — | **200** QuizRecord, gồm questions |
+| `GET /quizzes/:id` | — | **200** QuizRecord, including questions |
 | `PATCH /quizzes/:id` | Partial QuizInput | **200** QuizRecord |
-| `DELETE /quizzes/:id` | — | **200** `{ "success": true }`; xóa mềm |
-| `POST /quizzes/:id/duplicate` | — | **201** QuizRecord mới; title thêm ` (bản sao)` |
+| `DELETE /quizzes/:id` | — | **200** `{ "success": true }`; soft delete |
+| `POST /quizzes/:id/duplicate` | — | **201** new QuizRecord; the title gets a ` (bản sao)` ("copy") suffix |
 | `POST /quizzes/:id/questions` | QuestionInput | **201** QuestionRecord |
 | `PATCH /quizzes/:id/questions/:questionId` | Partial QuestionInput | **200** QuestionRecord |
-| `DELETE /quizzes/:id/questions/:questionId` | — | **200** `{ "success": true }`; xóa mềm |
+| `DELETE /quizzes/:id/questions/:questionId` | — | **200** `{ "success": true }`; soft delete |
 
-QuizRecord thực tế gồm `id, teacherId, title, description, createdAt, updatedAt, deletedAt, questions`. QuestionRecord gồm `id, quizId, content, optionA, optionB, optionC, optionD, type, correctAnswer, explanation, knowledge, topic, difficulty, origin, durationSeconds, order, deletedAt`. Trường thời gian được serialize ISO-8601; deletedAt của bản đang hoạt động là null. Questions trong quiz sắp theo order tăng dần và không gồm câu đã xóa. Các endpoint trả đáp án đúng của tài liệu quiz cho giáo viên sở hữu để biên soạn; quy tắc che đáp án của phiên học nằm ở SessionSnapshot.
+A QuizRecord actually contains `id, teacherId, title, description, createdAt, updatedAt, deletedAt, questions`. A QuestionRecord contains `id, quizId, content, optionA, optionB, optionC, optionD, type, correctAnswer, explanation, knowledge, topic, difficulty, origin, durationSeconds, order, deletedAt`. Time fields are serialised as ISO-8601; `deletedAt` of an active record is null. Questions in a quiz are sorted by `order` ascending and exclude deleted ones. These endpoints return the correct answers of the quiz document to the owning teacher for authoring; the rules that hide answers during a session are in SessionSnapshot.
 
-Lỗi chung của nhóm: 400 validation/UUID không đúng; 401 chưa đăng nhập; 404 không thuộc quyền sở hữu/không tồn tại; 409 xung đột unique nếu có.
+Common errors for the group: 400 validation/invalid UUID; 401 not logged in; 404 not owned/not found; 409 unique conflict where relevant.
 
-## Session: tạo, điều khiển và báo cáo
+## Sessions: create, control and report
 
-Tạo phiên từ quiz có ít nhất một câu:
+Create a session from a quiz with at least one question:
 
 ```json
 {
@@ -124,36 +124,36 @@ Tạo phiên từ quiz có ít nhất một câu:
 }
 ```
 
-quizId bắt buộc là UUID thuộc giáo viên. Mode tùy chọn `MANUAL`/`TIMER`, mặc định MANUAL. durationSeconds tùy chọn, nguyên 5–3600; nếu bỏ qua, từng câu dùng thời gian từ quiz. Session sao chép câu hỏi, nên chỉnh quiz sau đó không thay đổi phiên đã tạo. `classroomId` (tùy chọn) gán phiên cho một lớp: báo cáo hiện họ tên theo mã thiết bị và cộng điểm vào thống kê lớp. `shuffleQuestions`/`shuffleOptions` (mặc định false) trộn thứ tự câu và vị trí A–D cho riêng phiên này; câu có phương án phụ thuộc vị trí ("Tất cả các đáp án trên", "Cả A và B") được giữ nguyên thứ tự phương án, các tham chiếu kiểu "đáp án B" trong lời giải được đổi theo vị trí mới.
+`quizId` is required and must be the UUID of one of the teacher's quizzes. `mode` is optional, `MANUAL`/`TIMER`, default MANUAL. `durationSeconds` is optional, an integer 5–3600; if omitted each question uses its time from the quiz. A session copies the questions, so editing the quiz later does not change a session that was already created. `classroomId` (optional) assigns the session to a class: the report shows full names by device code and adds the scores to the class statistics. `shuffleQuestions`/`shuffleOptions` (default false) shuffle the question order and the A–D positions for this session only; a question whose options depend on position ("All of the above", "Both A and B") keeps its option order, and references such as "answer B" in the explanation are rewritten to the new position.
 
-| Method / path | Body | Thành công |
+| Method / path | Body | Success |
 |---|---|---|
-| `GET /sessions` | — | **200** SessionSnapshot[], gồm lịch sử và phiên hiện tại; createdAt giảm dần |
-| `POST /sessions` | `{ quizId, mode?, durationSeconds?, classroomId?, shuffleQuestions?, shuffleOptions? }` | **201** SessionSnapshot ở LOBBY |
-| `GET /sessions/:id/analysis` | — | **200** SessionAnalysis: phân tích từng câu, điểm từng sinh viên, lần phân tích AI gần nhất |
-| `POST /sessions/:id/ai-analysis` | Không cần | **201** AiJob `ANALYZE_SESSION`; 400 nếu chưa có câu đã đóng/sinh viên |
+| `GET /sessions` | — | **200** SessionSnapshot[], history plus the current session; createdAt descending |
+| `POST /sessions` | `{ quizId, mode?, durationSeconds?, classroomId?, shuffleQuestions?, shuffleOptions? }` | **201** SessionSnapshot in LOBBY |
+| `GET /sessions/:id/analysis` | — | **200** SessionAnalysis: per-question analysis, each student's score, the latest AI analysis |
+| `POST /sessions/:id/ai-analysis` | Not needed | **201** AiJob `ANALYZE_SESSION`; 400 if there is no closed question/student yet |
 | `GET /sessions/:id` | — | **200** SessionSnapshot |
-| `GET /sessions/:id/participants` | — | **200** Participant[] theo trạng thái câu hiện tại |
-| `GET /sessions/:id/stats` | — | **200** QuestionStats của câu hiện tại |
-| `GET /sessions/:id/report` | — | **200** SessionSnapshot; truy cập được cả khi phiên chưa kết thúc |
-| `GET /sessions/:id/export.csv` | — | **200** tệp CSV kết quả; `Content-Disposition: attachment` |
-| `POST /sessions/:id/start` | Không cần | **201** SessionSnapshot, mở câu index 0 từ LOBBY |
-| `POST /sessions/:id/open` | `{ questionId?: UUID, index?: number }` | **201** SessionSnapshot, mở một câu chưa từng mở |
-| `POST /sessions/:id/close` | Không cần | **201** SessionSnapshot, đóng câu đang mở |
-| `POST /sessions/:id/next` | Không cần | **201** SessionSnapshot, mở câu tiếp hoặc finish sau câu cuối |
-| `POST /sessions/:id/finish` | Không cần | **201** SessionSnapshot ở FINISHED |
+| `GET /sessions/:id/participants` | — | **200** Participant[] for the state of the current question |
+| `GET /sessions/:id/stats` | — | **200** QuestionStats of the current question |
+| `GET /sessions/:id/report` | — | **200** SessionSnapshot; available even when the session has not finished |
+| `GET /sessions/:id/export.csv` | — | **200** CSV file of the results; `Content-Disposition: attachment` |
+| `POST /sessions/:id/start` | Not needed | **201** SessionSnapshot, opens question index 0 from LOBBY |
+| `POST /sessions/:id/open` | `{ questionId?: UUID, index?: number }` | **201** SessionSnapshot, opens a question that was never opened |
+| `POST /sessions/:id/close` | Not needed | **201** SessionSnapshot, closes the open question |
+| `POST /sessions/:id/next` | Not needed | **201** SessionSnapshot, opens the next question or finishes after the last |
+| `POST /sessions/:id/finish` | Not needed | **201** SessionSnapshot in FINISHED |
 | `PATCH /sessions/:id/settings` | `{ mode?: "MANUAL"|"TIMER", durationSeconds?: number }` | **200** SessionSnapshot |
 
-Các POST điều khiển trả **201** theo mặc định controller NestJS, không phải 200/204. Mỗi request đều kiểm tra teacherId; không dùng roomCode để cấp quyền điều khiển.
+The control POSTs return **201** by NestJS controller default, not 200/204. Every request checks the teacherId; the roomCode is never used to grant control.
 
-Quy tắc điều khiển:
+Control rules:
 
-- `start` chỉ từ LOBBY. `next` từ LOBBY trả 409; phải start hoặc open trước.
-- `open`: questionId là **SessionQuestion ID** trong phiên; được ưu tiên nếu đồng thời có index. Index bắt đầu từ 0; khi bỏ cả hai, dùng currentQuestionIndex + 1. Index/questionId ngoài phiên trả 400; câu từng mở trả 409. Không có endpoint liệt kê trước toàn bộ SessionQuestion ID; có thể mở bằng index.
-- `next` hoặc `open` khi câu còn ACTIVE sẽ đóng câu cũ ngay. `next` vượt câu cuối kết thúc phiên; `open` vượt phạm vi trả 400.
-- `close` khi đã CLOSED là idempotent, vẫn thành công; từ LOBBY trả 409. `finish` khi đã FINISHED vẫn thành công. Thao tác khác trên FINISHED trả 409.
-- Deadline luôn do server đặt và áp dụng cho cả MANUAL/TIMER. TIMER chờ 3 giây sau đóng câu rồi next/finish; MANUAL chờ thao tác giáo viên.
-- Settings duration áp dụng các câu mở sau; không gia hạn câu đang chạy. Bật TIMER khi đang CLOSED đặt nextQuestionAt = server hiện tại + 3 giây; đổi sang MANUAL xóa lịch tự chuyển. Không có API reset override duration về null.
+- `start` only works from LOBBY. `next` from LOBBY returns 409; start or open first.
+- `open`: `questionId` is the **SessionQuestion ID** within the session; it takes priority when `index` is also given. The index starts at 0; when both are omitted, currentQuestionIndex + 1 is used. An index/questionId outside the session returns 400; a question that was already opened returns 409. There is no endpoint that lists every SessionQuestion ID in advance; you can open by index.
+- `next` or `open` while a question is still ACTIVE closes the old question immediately. `next` past the last question finishes the session; `open` out of range returns 400.
+- `close` when already CLOSED is idempotent and still succeeds; from LOBBY it returns 409. `finish` when already FINISHED still succeeds. Any other action on FINISHED returns 409.
+- The deadline is always set by the server and applies to both MANUAL and TIMER. TIMER waits 3 seconds after closing a question and then calls next/finish; MANUAL waits for the teacher.
+- A settings duration applies to questions opened afterwards; it does not extend the running question. Turning on TIMER while CLOSED sets nextQuestionAt = current server time + 3 seconds; switching to MANUAL clears the automatic advance schedule. There is no API to reset the duration override to null.
 
 ### SessionSnapshot
 
@@ -161,7 +161,7 @@ Quy tắc điều khiển:
 {
   "id": "96873534-7d0d-4457-a7d4-2fdc459158a9",
   "quizId": "0ad516d4-e23d-48e1-b8f6-3c067b2f57d1",
-  "title": "Nhập môn IoT",
+  "title": "Introduction to IoT",
   "roomCode": "123456",
   "status": "QUESTION_ACTIVE",
   "mode": "MANUAL",
@@ -169,11 +169,11 @@ Quy tắc điều khiển:
   "totalQuestions": 1,
   "currentQuestion": {
     "id": "78bb357f-d1f1-4d7c-855e-c40f0f598c60",
-    "content": "MQTT dùng mô hình giao tiếp nào?",
+    "content": "Which communication model does MQTT use?",
     "optionA": "Publish/subscribe",
-    "optionB": "Chỉ peer-to-peer",
-    "optionC": "Chỉ request/response",
-    "optionD": "Chỉ broadcast UDP",
+    "optionB": "Peer-to-peer only",
+    "optionC": "Request/response only",
+    "optionD": "UDP broadcast only",
     "durationSeconds": 30,
     "order": 0
   },
@@ -209,17 +209,17 @@ Quy tắc điều khiển:
 }
 ```
 
-Trong LOBBY: currentQuestionIndex=-1, currentQuestion=null, các deadline=null. Trong ACTIVE, currentQuestion không có correctAnswer và participant không có answer/isCorrect. Phân phối A/B/C/D được trả; đúng/sai chưa công bố nên bằng 0. Khi CLOSED/FINISHED, currentQuestion có correctAnswer và participant đã trả lời có answer/isCorrect. `results` chỉ chứa câu đã đóng, mỗi phần tử `{ question: PublicQuestion, stats: QuestionStats }` có đáp án đúng.
+In LOBBY: currentQuestionIndex=-1, currentQuestion=null and the deadlines are null. While ACTIVE, `currentQuestion` has no `correctAnswer` and a participant has no `answer`/`isCorrect`. The A/B/C/D distribution is returned; correct/incorrect has not been published yet, so it is 0. When CLOSED/FINISHED, `currentQuestion` has `correctAnswer` and a participant who answered has `answer`/`isCorrect`. `results` only holds closed questions; each item is `{ question: PublicQuestion, stats: QuestionStats }` with the correct answer.
 
-Snapshot còn có `classroomId`, `classroomName`, `examId`, `variantCode` (mã đề khi phiên mở từ kỳ thi); `currentQuestion.type` cho biết câu một hay nhiều đáp án; participant có `studentName` khi phiên gán lớp. Khi CLOSED/FINISHED, câu hỏi có thêm `explanation`. Với câu nhiều đáp án, `answer` là khóa như `AC`; `counts`/`percentages` đếm số sinh viên đã chọn từng chữ (tổng có thể vượt 100%), còn `correct` chỉ đếm khóa khớp hoàn toàn.
+A snapshot also has `classroomId`, `classroomName`, `examId` and `variantCode` (the paper code when the session was opened from an exam); `currentQuestion.type` tells whether the question is single- or multiple-answer; a participant has `studentName` when the session is assigned to a class. When CLOSED/FINISHED the question also has `explanation`. For a multiple-answer question, `answer` is a key such as `AC`; `counts`/`percentages` count the students who chose each letter (the total can exceed 100 %), while `correct` only counts keys that match exactly.
 
-Các phần trăm dùng answered làm mẫu số, làm tròn hai chữ số, bằng 0 khi answered=0. Report trả snapshot và kết quả từng câu, không tạo thêm leaderboard. Snapshot luôn gồm serverTime để đồng bộ countdown. ID của câu trong snapshot khác ID câu trong quiz gốc.
+Percentages use answered as the denominator, are rounded to two decimals and are 0 when answered=0. The report returns the snapshot and the result of each question and creates no extra leaderboard. A snapshot always includes `serverTime` to synchronise countdowns. A question's ID in a snapshot differs from the question's ID in the original quiz.
 
-Endpoint `export.csv` trả một dòng cho mỗi sinh viên, gồm mã phòng, tên quiz, mã sinh viên, họ tên (theo danh sách lớp nếu có), device ID, thời điểm tham gia, đáp án/kết quả của từng câu, tổng số câu đúng và điểm thang 10. CSV dùng CRLF, bao mọi ô bằng dấu nháy kép và thêm UTF-8 BOM để Excel hiển thị đúng tiếng Việt. Ô văn bản bắt đầu bằng `=`, `+`, `-` hoặc `@` được vô hiệu hóa công thức. Chỉ giáo viên sở hữu phiên mới có thể tải tệp.
+The `export.csv` endpoint returns one row per student with the room code, quiz title, student code, full name (from the class list if any), device ID, join time, the answer/result for each question, the total number of correct answers and the score out of 10. The CSV uses CRLF, quotes every cell and adds a UTF-8 BOM so Excel shows Vietnamese correctly. Text cells starting with `=`, `+`, `-` or `@` are neutralised against formula injection. Only the teacher who owns the session can download the file.
 
-## Socket.IO cho giáo viên
+## Socket.IO for teachers
 
-Endpoint `/socket.io/` trên cùng origin frontend; backend port 3000 cũng cung cấp endpoint này. Namespace mặc định `/`, hỗ trợ WebSocket và polling. MQTT simulator không dùng Socket.IO.
+The `/socket.io/` endpoint is on the same origin as the frontend; the backend on port 3000 also serves it. The default namespace is `/`, with WebSocket and polling support. The MQTT simulator does not use Socket.IO.
 
 ```ts
 import { io } from 'socket.io-client';
@@ -240,23 +240,23 @@ socket.on('connect', () => {
 socket.on('session:update', snapshot => renderSnapshot(snapshot));
 ```
 
-| Sự kiện | Hướng / payload | Kết quả |
+| Event | Direction / payload | Result |
 |---|---|---|
-| Handshake | Client auth `{ token: accessToken }` | Sai/thiếu token: `connect_error`, message `Unauthorized` |
-| `session:join` | Client → server `{ sessionId: UUID }` | Callback `{ success: true }`; server phát ngay `session:update` |
-| `session:join` sai dữ liệu | Client → server | `{ success: false, message: "Invalid sessionId" }` |
-| `session:join` không có quyền/tài nguyên | Client → server | `{ success: false, message: "Session not found or unauthorized" }` |
-| `session:update` | Server → client SessionSnapshot | Sau join và sau thay đổi participant/answer/trạng thái/settings |
+| Handshake | Client auth `{ token: accessToken }` | Wrong/missing token: `connect_error`, message `Unauthorized` |
+| `session:join` | Client → server `{ sessionId: UUID }` | Callback `{ success: true }`; the server immediately emits `session:update` |
+| `session:join` with bad data | Client → server | `{ success: false, message: "Invalid sessionId" }` |
+| `session:join` without permission/resource | Client → server | `{ success: false, message: "Session not found or unauthorized" }` |
+| `session:update` | Server → client SessionSnapshot | After a join and after a change to participants/answers/state/settings |
 
-Server kiểm tra token lại khi join, xác nhận quyền sở hữu và chỉ cho socket theo dõi một room `session:{id}` tại một thời điểm; join phiên mới sẽ rời room phiên cũ. Snapshot được đọc lại sau khi vào room để tránh bỏ lỡ thay đổi lúc join. Token hết hạn khiến server disconnect; client refresh qua cookie, cập nhật `socket.auth.token`, reconnect rồi emit session:join lại.
+The server checks the token again on join, confirms ownership and lets a socket follow only one `session:{id}` room at a time; joining a new session leaves the old session's room. The snapshot is read again after entering the room so no change is missed during the join. An expired token makes the server disconnect; the client refreshes through the cookie, updates `socket.auth.token`, reconnects and emits session:join again.
 
-Không có event Socket.IO để gửi answer hoặc điều khiển session; thao tác giáo viên dùng REST. Không có broadcast countdown từng giây: browser tự hiển thị từ deadline server và làm mới qua snapshot. Reload/reconnect phải lấy lại REST snapshot; frontend đã triển khai fallback polling 5 giây khi Socket mất kết nối.
+There is no Socket.IO event for sending answers or controlling the session; teacher actions use REST. There is no per-second countdown broadcast: the browser renders it from the server deadline and refreshes through snapshots. After a reload/reconnect the REST snapshot must be fetched again; the frontend already implements a 5-second polling fallback when the socket is down.
 
-## Lỗi, validation và giới hạn
+## Errors, validation and limits
 
-DTO bật whitelist, forbidNonWhitelisted và transform: trường ngoài DTO bị 400; số JSON phải là số nguyên trong giới hạn, không gửi chuỗi thay số. Path UUID sai bị 400. Các endpoint không nhận DTO body (ví dụ start/finish) không dùng các trường body để điều khiển hành vi.
+DTOs enable whitelist, forbidNonWhitelisted and transform: a field outside the DTO gives 400; JSON numbers must be integers within the limits and a string must not be sent in place of a number. A bad path UUID gives 400. Endpoints without a DTO body (for example start/finish) do not use any body fields to control behaviour.
 
-Lỗi qua exception filter:
+Errors that go through the exception filter:
 
 ```json
 {
@@ -267,25 +267,25 @@ Lỗi qua exception filter:
 }
 ```
 
-message có thể là chuỗi, danh sách lỗi validation hoặc object health. Header `x-request-id` có trên response. Middleware rate limit/Origin trả trực tiếp `{ statusCode, message }`, không có timestamp/requestId trong body; requestId vẫn ở header.
+The `message` text is Vietnamese, as in the interface (here: "The session has ended."). `message` can be a string, a list of validation errors or a health object. The `x-request-id` header is present on the response. The rate-limit/Origin middleware returns `{ statusCode, message }` directly, without timestamp/requestId in the body; the requestId is still in the header.
 
-| Status | Ý nghĩa |
+| Status | Meaning |
 |---:|---|
-| 400 | DTO/UUID sai, quiz rỗng khi tạo session, tham số câu ngoài phạm vi, email đã dùng |
-| 401 | Thiếu/sai/hết hạn access hoặc refresh token, sai thông tin đăng nhập |
-| 403 | Origin của request thay đổi không được phép |
-| 404 | Tài nguyên không tồn tại, đã xóa mềm hoặc thuộc giáo viên khác |
-| 409 | Chuyển trạng thái không hợp lệ, mở lại câu cũ, xung đột unique/cấp mã phòng |
-| 413 | File tải lên vượt 20 MB hoặc nội dung giải nén quá lớn |
-| 429 | Vượt rate limit (đọc header Retry-After, giây) hoặc đang có quá 3 tác vụ AI chưa xong |
-| 500 | Lỗi nội bộ; response không chứa stack/password/token |
-| 503 | Health báo database hoặc MQTT chưa sẵn sàng; endpoint AI khi chưa cấu hình nguồn AI |
+| 400 | Bad DTO/UUID, empty quiz when creating a session, question parameter out of range, email already used |
+| 401 | Missing/wrong/expired access or refresh token, wrong login credentials |
+| 403 | The Origin of a state-changing request is not allowed |
+| 404 | The resource does not exist, was soft-deleted or belongs to another teacher |
+| 409 | Invalid state transition, reopening an old question, unique conflict/room code allocation |
+| 413 | Uploaded file larger than 20 MB or extracted content too large |
+| 429 | Rate limit exceeded (read the Retry-After header, in seconds) or more than 3 unfinished AI tasks |
+| 500 | Internal error; the response contains no stack/password/token |
+| 503 | Health reports the database or MQTT is not ready; AI endpoints when no AI source is configured |
 
-Mặc định mỗi IP có 20 login/register request/phút (cùng bucket) và 600 request/phút cho các endpoint khác. Điều chỉnh qua AUTH_RATE_LIMIT/API_RATE_LIMIT. Limiter hiện nằm trong bộ nhớ một backend. CORS cho origin trong FRONTEND_ORIGIN, hoặc CORS_ORIGIN nếu chưa đặt FRONTEND_ORIGIN; danh sách ngăn cách dấu phẩy. Request không có Origin được xử lý bình thường với yêu cầu auth tương ứng.
+By default each IP gets 20 login/register requests per minute (the same bucket) and 600 requests per minute for the other endpoints. Adjust through AUTH_RATE_LIMIT/API_RATE_LIMIT. The limiter currently lives in the memory of a single backend. CORS allows the origins in FRONTEND_ORIGIN, or CORS_ORIGIN if FRONTEND_ORIGIN is not set; the list is comma-separated. Requests without an Origin are handled normally subject to the corresponding auth requirements.
 
 ## Health
 
-`GET /health` không cần token. Khi PostgreSQL và MQTT sẵn sàng, HTTP 200:
+`GET /health` needs no token. When PostgreSQL and MQTT are ready it returns HTTP 200:
 
 ```json
 {
@@ -298,35 +298,37 @@ Mặc định mỗi IP có 20 login/register request/phút (cùng bucket) và 60
 }
 ```
 
-Nếu MQTT_DISABLED=true, mqtt là `disabled` và health chỉ yêu cầu database. `ai` là `configured` khi đã cấu hình Gemini, Ollama hoặc Claude, ngược lại `disabled`; AI không ảnh hưởng trạng thái ok/degraded. Khi lỗi, HTTP 503 với envelope lỗi chung, trường `message` là object tương tự trên có status=`degraded`, database/mqtt=`down`. Health chứng minh API đang đáp ứng, database nhận `SELECT 1` và client MQTT đang connected; không thay cho kiểm thử end-to-end.
+If MQTT_DISABLED=true, mqtt is `disabled` and health only requires the database. `ai` is `configured` when Gemini, Ollama or Claude is configured, otherwise `disabled`; AI does not affect the ok/degraded status. On failure it returns HTTP 503 with the common error envelope, whose `message` field is an object like the one above with status=`degraded` and database/mqtt=`down`. Health proves the API is responding, the database accepts `SELECT 1` and the MQTT client is connected; it is not a substitute for an end-to-end test.
 
-## Nhập câu hỏi từ file
+## Importing questions from a file
 
-Upload dùng `multipart/form-data` với một trường `file`, tối đa 20 MB. Kết quả là bản nháp để giáo viên kiểm tra trong editor; không có gì được lưu cho tới khi gọi `POST/PATCH /quizzes`.
+Upload uses `multipart/form-data` with a single `file` field, at most 20 MB. The result is a draft for the teacher to check in the editor; nothing is stored until `POST/PATCH /quizzes` is called.
 
-| Method / path | Body | Thành công |
+| Method / path | Body | Success |
 |---|---|---|
 | `POST /imports/questions` | file `.txt`, `.docx`, `.xlsx`, `.csv`, `.pdf` | **201** ImportResult |
-| `POST /imports/questions/ai` | file `.docx`, `.pdf` (kể cả PDF scan), `.txt` | **201** AiJob `EXTRACT_QUESTIONS`; `result` là ImportResult |
-| `GET /imports/template.xlsx` | — | **200** file Excel mẫu (sheet hướng dẫn, danh sách chọn Loại/Độ khó) |
-| `GET /imports/template.docx` | — | **200** file Word mẫu |
+| `POST /imports/questions/ai` | file `.docx`, `.pdf` (scanned PDFs included), `.txt` | **201** AiJob `EXTRACT_QUESTIONS`; `result` is an ImportResult |
+| `GET /imports/template.xlsx` | — | **200** sample Excel file (an instruction sheet, drop-down lists for type/difficulty) |
+| `GET /imports/template.docx` | — | **200** sample Word file |
 
 ```json
 {
-  "title": "ngan-hang-iot",
+  "title": "iot-question-bank",
   "description": "",
-  "sourceName": "ngan-hang-iot.docx",
+  "sourceName": "iot-question-bank.docx",
   "format": "docx",
-  "questions": [{ "content": "…", "optionA": "…", "optionB": "…", "optionC": "…", "optionD": "…", "type": "MULTIPLE", "correctAnswer": "AC", "explanation": "", "knowledge": "", "topic": "Chương 1", "difficulty": null, "origin": "IMPORT", "durationSeconds": 30, "order": 0 }],
+  "questions": [{ "content": "…", "optionA": "…", "optionB": "…", "optionC": "…", "optionD": "…", "type": "MULTIPLE", "correctAnswer": "AC", "explanation": "", "knowledge": "", "topic": "Chapter 1", "difficulty": null, "origin": "IMPORT", "durationSeconds": 30, "order": 0 }],
   "warnings": ["Câu 2 (dòng 8): chưa chọn đáp án đúng."]
 }
 ```
 
-Trình đọc văn bản (TXT/Word/PDF) nhận: `Câu N:`/`Question N`/`N.`, phương án `A.`/`A)`/`(A)` trên từng dòng hoặc cùng một dòng, dòng `Đáp án: B` hoặc `Đáp án: A, C`, dấu `*` trước phương án đúng, bảng đáp án cuối tài liệu (`1-A, 2-C`, `1A 2C`, hoặc hai dòng `Câu | 1 | 2` / `Đáp án | A | C`), phần "Hướng dẫn giải" (`Câu 2: Chọn C vì…`), và các dòng tùy chọn `Giải thích:`, `Kiến thức:`, `Chủ đề:`, `Độ khó:` (Dễ/Trung bình/Khó, Nhận biết/Thông hiểu/Vận dụng, nhãn `[NB]`), `Loại:`, `Thời gian:`. Word còn nhận phương án đúng được gạch chân, tô màu chữ, tô nền hoặc in đậm, tiêu đề chương theo style Heading và câu đánh số tự động. Excel/CSV đọc mỗi dòng một câu theo tên cột (STT, Câu hỏi, A–D, Đáp án, Loại, Thời gian, Độ khó, Chủ đề, Kiến thức, Lời giải); đáp án có thể là chữ hoặc số 1–4. `.doc`/`.xls` đời cũ trả 400 kèm hướng dẫn lưu lại dạng mới.
+The warning text is Vietnamese like the rest of the interface (here: "Question 2 (line 8): no correct answer chosen.").
 
-## Trợ lý AI
+The text reader (TXT/Word/PDF) recognises the Vietnamese keywords of the interface: `Câu N:`/`Question N`/`N.` for a question, options `A.`/`A)`/`(A)` one per line or all on one line, a line `Đáp án: B` or `Đáp án: A, C` (answer), a `*` before the correct option, an answer table at the end of the document (`1-A, 2-C`, `1A 2C`, or two lines `Câu | 1 | 2` / `Đáp án | A | C`), a "Hướng dẫn giải" (solution guide) section (`Câu 2: Chọn C vì…`), and the optional lines `Giải thích:` (explanation), `Kiến thức:` (knowledge), `Chủ đề:` (topic), `Độ khó:` (difficulty: Dễ/Trung bình/Khó = easy/medium/hard, Nhận biết/Thông hiểu/Vận dụng = recall/understand/apply, or a label such as `[NB]`), `Loại:` (type), `Thời gian:` (time). Word also recognises a correct option that is underlined, coloured, highlighted or bold, chapter headings in Heading styles, and automatically numbered questions. Excel/CSV is read one question per row by column name (STT, Câu hỏi, A–D, Đáp án, Loại, Thời gian, Độ khó, Chủ đề, Kiến thức, Lời giải); the answer can be a letter or a number 1–4. Old `.doc`/`.xls` files return 400 with instructions to re-save in the new format.
 
-Nguồn AI chọn qua biến môi trường: Google Gemini (`GEMINI_API_KEY`, mặc định `gemini-3.8-flash`, có gói miễn phí giới hạn theo phút/ngày), Ollama cục bộ (`OLLAMA_URL`, mặc định `qwen3:4b-instruct`) hoặc Anthropic Claude (`ANTHROPIC_API_KEY`, mặc định `claude-opus-5-5`); `AI_PROVIDER` chọn khi có nhiều nguồn. Mọi tác vụ chạy nền và được theo dõi bằng AiJob; tác vụ còn dở khi backend khởi động lại được đánh dấu FAILED. Mỗi giáo viên có tối đa 3 tác vụ chưa xong.
+## AI assistant
+
+The AI source is chosen through environment variables: Google Gemini (`GEMINI_API_KEY`, default `gemini-3.8-flash`, with a free tier limited per minute/day), local Ollama (`OLLAMA_URL`, default `qwen3:4b-instruct`) or Anthropic Claude (`ANTHROPIC_API_KEY`, default `claude-opus-5-5`); `AI_PROVIDER` chooses when several sources exist. Every task runs in the background and is tracked by an AiJob; a task left unfinished when the backend restarts is marked FAILED. Each teacher can have at most 3 unfinished tasks.
 
 ```json
 {
@@ -338,17 +340,17 @@ Nguồn AI chọn qua biến môi trường: Google Gemini (`GEMINI_API_KEY`, m�
 }
 ```
 
-| Method / path | Body | Thành công |
+| Method / path | Body | Success |
 |---|---|---|
-| `GET /ai/status` | — | **200** `{ enabled, provider: "gemini" \| "ollama" \| "anthropic" \| null, model, fallback: { provider, model } \| null }`; `fallback` là Ollama khi cấu hình cả nguồn đám mây lẫn `OLLAMA_URL` |
-| `GET /ai/jobs?kind=` | — | **200** AiJob[] gần nhất |
-| `GET /ai/jobs/:id` | — | **200** AiJob (poll 2 giây/lần tới SUCCEEDED/FAILED) |
-| `POST /ai/documents` | file `.pdf`, `.docx`, `.txt`, `.md` | **201** SourceDocument gồm các chương nhận diện được |
-| `GET /ai/documents` / `GET /ai/documents/:id` / `DELETE /ai/documents/:id` | — | Danh sách / chi tiết / xóa mềm tài liệu |
+| `GET /ai/status` | — | **200** `{ enabled, provider: "gemini" \| "ollama" \| "anthropic" \| null, model, fallback: { provider, model } \| null }`; `fallback` is Ollama when both a cloud source and `OLLAMA_URL` are configured |
+| `GET /ai/jobs?kind=` | — | **200** the most recent AiJob[] |
+| `GET /ai/jobs/:id` | — | **200** AiJob (poll every 2 seconds until SUCCEEDED/FAILED) |
+| `POST /ai/documents` | file `.pdf`, `.docx`, `.txt`, `.md` | **201** SourceDocument including the chapters it recognised |
+| `GET /ai/documents` / `GET /ai/documents/:id` / `DELETE /ai/documents/:id` | — | List / details / soft delete of a document |
 | `POST /ai/generate` | GenerateQuestionsRequest | **201** AiJob `GENERATE_QUESTIONS`; `result = { created, counts }` |
-| `GET /ai/generated?status=PENDING&jobId=` | — | **200** GeneratedQuestion[] (PENDING/APPROVED/REJECTED) kèm gợi ý trùng với ngân hàng |
+| `GET /ai/generated?status=PENDING&jobId=` | — | **200** GeneratedQuestion[] (PENDING/APPROVED/REJECTED) with hints about duplicates in the bank |
 | `GET /ai/generated/count` | — | **200** `{ pending }` |
-| `PATCH /ai/generated/:id` | các trường câu hỏi | **200** câu đề xuất đã sửa (chỉ khi PENDING) |
+| `PATCH /ai/generated/:id` | the question fields | **200** the edited proposal (only while PENDING) |
 | `POST /ai/generated/approve` | `{ ids, quizId? \| newQuizTitle?, durationSeconds? }` | **201** `{ quizId, quizTitle, approved }` |
 | `POST /ai/generated/reject` / `reopen` | `{ ids }` | **201** `{ rejected }` / `{ reopened }` |
 
@@ -356,59 +358,59 @@ Nguồn AI chọn qua biến môi trường: Google Gemini (`GEMINI_API_KEY`, m�
 {
   "documentId": "…", "sectionIndexes": [0, 1], "questionCount": 20,
   "easyPercent": 40, "mediumPercent": 40, "hardPercent": 20,
-  "multiplePercent": 10, "instructions": "Ưu tiên ví dụ thực tế", "quizId": "…"
+  "multiplePercent": 10, "instructions": "Prefer real-world examples", "quizId": "…"
 }
 ```
 
-Tổng ba tỷ lệ độ khó phải bằng 100; số câu 1–60; các chương chọn tối đa 500.000 ký tự. Câu hỏi được viết theo lô 12 câu, số câu mỗi mức độ được chia chính xác; AI tránh lặp lại câu đã viết trong lượt và câu sẵn có của `quizId`. Mỗi câu đề xuất có lời giải (`explanation`), kiến thức kiểm tra (`knowledge`), chương (`topic`) và trích dẫn tài liệu (`sourceExcerpt`). **Câu đề xuất không vào bộ câu hỏi nào cho tới khi gọi approve**; approve kiểm tra lại đáp án và giới hạn 200 câu/bộ. PDF scan được lưu nguyên file và gửi cho AI dưới dạng tài liệu PDF (Gemini/Claude; Ollama không hỗ trợ PDF dạng ảnh).
+The three difficulty percentages must add up to 100; the number of questions is 1–60; the chosen chapters total at most 500,000 characters. Questions are written in batches of 12 and the number per difficulty level is split exactly; the AI avoids repeating questions already written in the run and those already in `quizId`. Each proposed question has an explanation (`explanation`), the knowledge tested (`knowledge`), a chapter (`topic`) and a quotation from the material (`sourceExcerpt`). **A proposed question enters no question set until approve is called**; approve rechecks the answer and the limit of 200 questions per set. A scanned PDF is stored as a file and sent to the AI as a PDF document (Gemini/Claude; Ollama does not support image-only PDFs).
 
-Dữ liệu gửi tới dịch vụ AI bên ngoài (Gemini/Claude; Ollama xử lý ngay trên máy chủ): nội dung các chương đã chọn (tạo câu hỏi), file cần nhận dạng (nhập bằng AI), nội dung câu hỏi (đánh giá chất lượng) và số liệu tổng hợp không kèm tên/mã sinh viên (phân tích kết quả).
+Data sent to an external AI service (Gemini/Claude; Ollama processes everything on the server): the content of the chosen chapters (question generation), the file to recognise (AI import), the question text (quality review) and aggregated figures without student names/codes (result analysis).
 
-## Ngân hàng câu hỏi
+## Question bank
 
-| Method / path | Query | Thành công |
+| Method / path | Query | Success |
 |---|---|---|
-| `GET /bank/questions` | `search, quizId, difficulty (EASY/MEDIUM/HARD/UNSET), type, topic, origin` | **200** `{ total, items: BankQuestion[] (tối đa 500), topics }` |
-| `GET /bank/duplicates` | `threshold` (0.5–0.99, mặc định 0.8), `quizId` | **200** cặp `{ score, stem, options, kind, a, b }` |
+| `GET /bank/questions` | `search, quizId, difficulty (EASY/MEDIUM/HARD/UNSET), type, topic, origin` | **200** `{ total, items: BankQuestion[] (at most 500), topics }` |
+| `GET /bank/duplicates` | `threshold` (0.5–0.99, default 0.8), `quizId` | **200** pairs `{ score, stem, options, kind, a, b }` |
 
-Tìm kiếm không phân biệt dấu/hoa thường; mọi từ của truy vấn phải xuất hiện trong câu hỏi, phương án, chủ đề, kiến thức, lời giải hoặc tên bộ. Độ giống = 0,7 × câu dẫn + 0,3 × phương án (so sánh trigram ký tự, không phụ thuộc thứ tự phương án). `kind`: `EXACT` (≥ 97%), `NEAR`, `STEM` (cùng câu dẫn ≥ 90% nhưng khác phương án). Xóa câu trùng bằng `DELETE /quizzes/:id/questions/:questionId`.
+Search ignores accents and case; every word of the query must appear in the question, options, topic, knowledge, explanation or set name. Similarity = 0.7 × stem + 0.3 × options (character-trigram comparison, independent of option order). `kind`: `EXACT` (≥ 97 %), `NEAR`, `STEM` (same stem ≥ 90 % but different options). Delete a duplicate with `DELETE /quizzes/:id/questions/:questionId`.
 
-## Chất lượng đề và phân tích kết quả
+## Quality review and result analysis
 
-| Method / path | Thành công |
+| Method / path | Success |
 |---|---|
-| `GET /quizzes/:id/quality` | **200** QuizQualityReport: lỗi phát hiện tự động, phân bố vị trí đáp án/độ khó/loại câu, lần đánh giá AI gần nhất, phân tích kết quả các phiên đã kết thúc |
-| `POST /quizzes/:id/ai-review` | **201** AiJob `REVIEW_QUIZ`; `result` gồm điểm 0–100, nhận xét, từng câu (OK/REVIEW/FIX), lỗi theo nhóm, đánh giá từng phương án nhiễu, gợi ý viết lại, nhóm câu trùng |
+| `GET /quizzes/:id/quality` | **200** QuizQualityReport: automatically detected problems, the distribution of answer positions/difficulty/question type, the latest AI review, the analysis of the results of finished sessions |
+| `POST /quizzes/:id/ai-review` | **201** AiJob `REVIEW_QUIZ`; `result` has a score 0–100, comments, each question (OK/REVIEW/FIX), problems by group, a rating of each distractor, rewrite suggestions and groups of duplicate questions |
 
-Kiểm tra tự động (không cần AI): phương án trùng nhau, "Tất cả các đáp án trên"/"Cả A và B", đáp án đúng dài bất thường, câu phủ định chưa in hoa, câu nhiều đáp án chưa ghi rõ yêu cầu, câu nhắc tới hình/bảng (thiết bị chỉ hiển thị chữ), câu quá ngắn, câu trùng trong đề, đáp án tập trung một vị trí. AI bổ sung: câu mơ hồ, thiếu dữ kiện, nhiều đáp án có thể đúng, nghi sai đáp án, trùng nội dung theo ý nghĩa, phương án nhiễu yếu/lộ đáp án, lỗi chính tả.
+Automatic checks (no AI needed): identical options, "All of the above"/"Both A and B", an unusually long correct answer, negative questions that are not capitalised, multiple-answer questions that do not say so, questions that refer to a figure/table (the device only shows text), very short questions, duplicate questions in the paper, answers concentrated in one position. The AI adds: ambiguous questions, missing data, several possibly correct answers, a suspected wrong answer, duplicate content by meaning, weak distractors/giveaway options and spelling errors.
 
-Phân tích kết quả (lý thuyết trắc nghiệm cổ điển): tỷ lệ đúng p, độ phân biệt D (nhóm 27% điểm cao trừ 27% điểm thấp), tương quan điểm–câu, tỷ lệ chọn từng phương án ở mỗi nhóm, cảnh báo nhiễu không hiệu quả (< 5% chọn), nhiễu hút nhóm giỏi, nhiễu được chọn nhiều hơn đáp án đúng, độ tin cậy KR-20 và phổ điểm thang 10. Báo cáo của bộ câu hỏi gộp các phiên đã kết thúc dùng đúng các câu hiện tại (khớp theo ID hoặc nội dung) và quy đổi đáp án qua mọi lần xáo trộn, nên sửa đáp án sai sẽ chấm lại các phiên cũ trong báo cáo.
+Result analysis (classical test theory): the proportion correct p, the discrimination D (top 27 % of scores minus bottom 27 %), the item–score correlation, how often each option is chosen in each group, warnings about ineffective distractors (< 5 % choose it), distractors that attract the strong group, a distractor chosen more than the correct answer, the KR-20 reliability and the score distribution on a 10-point scale. The report for a question set merges the finished sessions that used exactly the current questions (matched by ID or content) and maps answers back through every shuffle, so fixing a wrong answer key regrades the old sessions in the report.
 
-## Lớp học
+## Classes
 
-| Method / path | Body | Thành công |
+| Method / path | Body | Success |
 |---|---|---|
-| `GET /classes` / `POST /classes` | `{ name, description? }` | Danh sách / **201** Classroom |
-| `GET /classes/:id` / `PATCH` / `DELETE` | `{ name?, description? }` | Classroom gồm students / xóa mềm |
-| `POST /classes/:id/students` | `{ students: [{ code: "01", name, externalId? }], replace? }` | **201** Classroom (upsert theo mã, `replace` thay toàn bộ) |
-| `PATCH` / `DELETE /classes/:id/students/:studentId` | các trường sinh viên | Classroom |
-| `POST /classes/:id/students/import` | file `.xlsx`/`.csv` | **201** `{ students, warnings }` để xem trước, chưa lưu |
-| `GET /classes/:id/report` | — | **200** ClassReport: các phiên đã kết thúc, điểm từng sinh viên từng buổi, điểm trung bình |
-| `GET /classes/:id/report.xlsx` | — | **200** bảng điểm Excel |
+| `GET /classes` / `POST /classes` | `{ name, description? }` | List / **201** Classroom |
+| `GET /classes/:id` / `PATCH` / `DELETE` | `{ name?, description? }` | Classroom with students / soft delete |
+| `POST /classes/:id/students` | `{ students: [{ code: "01", name, externalId? }], replace? }` | **201** Classroom (upsert by code, `replace` replaces everything) |
+| `PATCH` / `DELETE /classes/:id/students/:studentId` | the student fields | Classroom |
+| `POST /classes/:id/students/import` | file `.xlsx`/`.csv` | **201** `{ students, warnings }` for a preview; not saved yet |
+| `GET /classes/:id/report` | — | **200** ClassReport: finished sessions, each student's score per session, the average score |
+| `GET /classes/:id/report.xlsx` | — | **200** Excel score sheet |
 
-`code` là mã hai chữ số 01–99 sinh viên nhập trên keypad khi tham gia. File danh sách cần cột "Họ và tên"; "STT" được dùng làm mã thiết bị, thiếu/trùng thì tự cấp mã kế tiếp.
+`code` is the two-digit code 01–99 that a student enters on the keypad to join. The list file needs a "Họ và tên" (full name) column; "STT" (number) is used as the device code, and a missing/duplicate one is given the next free code automatically.
 
-## Kỳ thi
+## Exams
 
-| Method / path | Body | Thành công |
+| Method / path | Body | Success |
 |---|---|---|
-| `GET /exams` / `POST /exams` | `{ quizId, title, description?, variantCount (1–24), shuffleQuestions, shuffleOptions, durationSeconds? }` | Danh sách / **201** Exam |
-| `GET /exams/:id` / `DELETE /exams/:id` | — | Exam gồm mã đề và các phiên / xóa mềm |
-| `GET /exams/:id/variants/:code` | — | **200** đề theo mã: thứ tự câu, phương án, đáp án, câu gốc tương ứng |
-| `GET /exams/:id/papers.docx?code=` | — | **200** đề in (Word), một mã hoặc tất cả mã, mỗi mã một trang mới |
-| `GET /exams/:id/answer-key.xlsx` | — | **200** đáp án mọi mã đề và bảng đối chiếu câu gốc |
-| `POST /exams/:id/sessions` | `{ classroomId?, variantCode?, mode?, durationSeconds? }` | **201** SessionSnapshot; bỏ trống variantCode để dùng mã đề ít dùng nhất |
-| `GET /exams/:id/report` / `report.xlsx` | — | Thống kê theo lớp (điểm TB, trung vị, độ lệch chuẩn, tỷ lệ đạt, xếp loại), tỷ lệ đúng từng câu theo lớp / bảng điểm Excel |
-| `POST /exams/:id/ai-analysis` | — | **201** AiJob `ANALYZE_EXAM` (nhận xét chung và so sánh giữa các lớp) |
+| `GET /exams` / `POST /exams` | `{ quizId, title, description?, variantCount (1–24), shuffleQuestions, shuffleOptions, durationSeconds? }` | List / **201** Exam |
+| `GET /exams/:id` / `DELETE /exams/:id` | — | Exam with its paper codes and sessions / soft delete |
+| `GET /exams/:id/variants/:code` | — | **200** the paper for a code: question order, options, answers and the corresponding original questions |
+| `GET /exams/:id/papers.docx?code=` | — | **200** a printable paper (Word), for one code or all codes, each code starting on a new page |
+| `GET /exams/:id/answer-key.xlsx` | — | **200** the answers for every paper code and a table mapping to the original questions |
+| `POST /exams/:id/sessions` | `{ classroomId?, variantCode?, mode?, durationSeconds? }` | **201** SessionSnapshot; leave variantCode empty to use the least-used paper code |
+| `GET /exams/:id/report` / `report.xlsx` | — | Per-class statistics (mean, median, standard deviation, pass rate, grading) and the percentage correct per question per class / Excel score sheet |
+| `POST /exams/:id/ai-analysis` | — | **201** AiJob `ANALYZE_EXAM` (overall commentary and a comparison between classes) |
 
-Tạo kỳ thi sao chép câu hỏi của bộ tại thời điểm đó, nên sửa bộ câu hỏi sau này không đổi các mã đề. Mã đề đánh số 101, 102… và được sinh lại y hệt từ seed (ID kỳ thi + mã đề). Xếp loại: Giỏi ≥ 8, Khá 6,5–7,9, Trung bình 5–6,4, Yếu 3,5–4,9, Kém < 3,5.
+Creating an exam copies the questions of the set at that moment, so editing the question set later does not change the paper codes. Paper codes are numbered 101, 102… and are regenerated identically from the seed (exam ID + paper code). Grading: excellent (Giỏi) ≥ 8, good (Khá) 6.5–7.9, average (Trung bình) 5–6.4, weak (Yếu) 3.5–4.9, poor (Kém) < 3.5.

@@ -1,22 +1,22 @@
-// Keypad M5 -> 2 LED 7 doan M6 (74HC595 + 2 digit), classic ESP32-WROOM.
-// Phim 0-9 day vao tu ben phai (bam 1 roi 2 -> "12"); A-D hien A b C d; * xoa ve "--".
+// Keypad M5 -> two 7-segment LEDs M6 (74HC595 + 2 digits), classic ESP32-WROOM.
+// Keys 0-9 push in from the right (press 1 then 2 -> "12"); A-D show A b C d; * clears back to "--".
 // No external libraries required.
 #include <Arduino.h>
 
 // false: PCB wiring, AO3401A QDIG1/QDIG2 (LOW = ON).
 // true: no AO3401A yet, common anodes wired straight to GPIO17/GPIO4 (HIGH = ON).
-constexpr bool DIGIT_DIRECT_GPIO = false; // Bo mach in 0322ccc co QDIG1/QDIG2.
+constexpr bool DIGIT_DIRECT_GPIO = false; // Board 0322ccc has QDIG1/QDIG2.
 constexpr uint8_t DIGIT_ON = DIGIT_DIRECT_GPIO ? HIGH : LOW;
 constexpr uint8_t DIGIT_OFF = DIGIT_DIRECT_GPIO ? LOW : HIGH;
 
 constexpr uint16_t ROW_SETTLE_US = 200;
 constexpr uint32_t DEBOUNCE_MS = 35;
 constexpr uint8_t HOLD = 13, OE = 16, CLK = 18, LATCH = 19, DATA = 23;
-constexpr uint8_t DIGITS[2] = {17, 4};        // LED trai, LED phai
+constexpr uint8_t DIGITS[2] = {17, 4};        // left LED, right LED
 constexpr uint8_t ROWS[4] = {25, 26, 27, 22};
 constexpr uint8_t COLS[4] = {32, 33, 34, 35};
-// Bo 0322ccc dang chap WAKE_NODE voi COL3: nhan phim cot 1-3 thi COL3 cung len theo qua DWAKE0-2.
-// true: bo qua COL3 khi cung hang co phim khac (A-D van dung khi nhan rieng). Het chap thi dat false.
+// Board 0322ccc has WAKE_NODE shorted to COL3: pressing a key in columns 1-3 also raises COL3 through DWAKE0-2.
+// true: ignore COL3 when another key in the same row is pressed (A-D still work when pressed alone). Set false once the short is fixed.
 constexpr bool COL3_FOLLOWS_WAKE = true;
 constexpr char KEYS[4][4] = {
   {'1','2','3','A'}, {'4','5','6','B'},
@@ -101,7 +101,7 @@ void serviceKeys(uint32_t now) {
   if (candidate == stableKey || uint32_t(now - candidateSince) < DEBOUNCE_MS) return;
   stableKey = candidate;
   if (stableKey == char(0x7f)) {
-    Serial.println("[KEY] Nhieu phim cung luc; bam tung phim mot.");
+    Serial.println("[KEY] Several keys at once; press one key at a time.");
   } else if (stableKey) {
     onKey(stableKey);
   }
@@ -115,7 +115,7 @@ void setup() {
   for (uint8_t pin : ROWS) output(pin, HIGH); // All NPNs ON, raw rows LOW.
   for (uint8_t pin : COLS) pinMode(pin, INPUT); // External 100k pull-ups!
   Serial.begin(115200);
-  Serial.println("\nKeypad -> 2 LED: 0-9 day vao tu phai; A-D hien chu; * xoa");
+  Serial.println("\nKeypad -> 2 LEDs: 0-9 push in from the right; A-D show letters; * clears");
 }
 
 void loop() {

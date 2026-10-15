@@ -1,107 +1,106 @@
-# Báo cáo kiểm thử ClassPulse MVP
+# ClassPulse MVP test report
 
-## Nâng cấp 12/10/2026: nhiều đáp án, nhập file, AI, ngân hàng câu hỏi, kỳ thi
+## Upgrade of 12 Oct 2026: multiple answers, file import, AI, question bank, exams
 
-Chạy trong container Node 22 (podman) với PostgreSQL 17.6 và EMQX 5.8.8 tạm thời, tách khỏi dữ liệu thật.
+Run in a Node 22 container (podman) with a temporary PostgreSQL 17.6 and EMQX 5.8.8, separate from the real data.
 
-| Nhóm | Lệnh / cách kiểm tra | Kết quả |
+| Group | Command / how it was checked | Result |
 |---|---|---|
-| Shared types (khóa đáp án, trình đọc câu hỏi, trùng lặp, phân tích câu hỏi, mã đề) | `pnpm --filter @classpulse/shared-types test` | **16/16 đạt** |
-| MQTT contracts | `pnpm --filter @classpulse/mqtt-contracts test` | **10/10 đạt** |
-| Backend unit (Word/PDF/Excel thật, tách chương, kế hoạch tạo câu, kiểm tra chất lượng, trộn đề, schema gửi Gemini/Ollama/Claude, chọn nguồn AI, luồng NDJSON và lỗi của Ollama, tự chuyển sang Ollama khi hết hạn mức) | `pnpm --filter @classpulse/backend test` | **26/26 đạt** |
-| Frontend | `pnpm --filter @classpulse/frontend test` | **13/13 đạt** (thêm ghi chú nguồn AI dự phòng, thời gian tác vụ đã chạy) |
-| Device simulator | `pnpm --filter @classpulse/device-simulator test` | **7/7 đạt** |
-| Firmware logic C | `pnpm test:firmware` | **5/5 nhóm đạt** (thêm nhóm chọn nhiều đáp án) |
-| PostgreSQL integration | `pnpm test:integration` | **16/16 đạt** (10 cũ + 6 mới) |
-| Migration trên dữ liệu cũ | migrate schema cũ, chèn dữ liệu A–D, chạy migration mới | **Đạt**: giữ nguyên đáp án, xóa enum cũ, không drift schema, CHECK từ chối khóa sai |
-| HTTP smoke + API Gemini/Claude giả lập cục bộ | 24 bước: tải giáo trình, tạo câu theo tỷ lệ, duyệt/loại, nhập TXT/Word/Excel/CSV/PDF, nhận dạng AI, đánh giá đề, ngân hàng, lớp, kỳ thi, quyền sở hữu; chạy một lần với SDK `@google/genai` và một lần với SDK Anthropic | **24/24 đạt** với cả hai (chạy trước khi thêm cơ chế tự chuyển sang Ollama; cơ chế này được kiểm bằng unit test với SDK Anthropic thật và máy chủ giả trả 429) |
-| AI thật qua Ollama 0.40.3 + `qwen3:4b-instruct`, chỉ CPU (laptop 16 luồng, 14 GB RAM) | 4 tác vụ qua API backend; xem mục bên dưới | **4/4 tác vụ chạy được**; chất lượng không đều, xem bên dưới |
-| UI thật (Chromium 147, bản build production) | 10 kịch bản trên giao diện, kiểm tra lỗi console và request lỗi | **10/10 đạt, không lỗi** |
-| End-to-end có sẵn với EMQX thật | `scripts/tests/e2e.ts` | **10/10 nhóm đạt** |
-| Simulator trình duyệt ↔ EMQX ↔ backend | câu nhiều đáp án chọn C, A → gửi `AC`; câu một đáp án | **Đạt**, chấm đúng cả hai |
-| Build | `pnpm build`, image backend/frontend | **Đạt**; image backend migrate database trống và khởi động |
+| Shared types (answer keys, question reader, duplicates, question analysis, paper codes) | `pnpm --filter @classpulse/shared-types test` | **16/16 passed** |
+| MQTT contracts | `pnpm --filter @classpulse/mqtt-contracts test` | **10/10 passed** |
+| Backend unit (real Word/PDF/Excel, chapter splitting, the question-generation plan, quality checks, paper shuffling, the schema sent to Gemini/Ollama/Claude, AI source selection, Ollama's NDJSON stream and errors, automatic fallback to Ollama on quota exhaustion) | `pnpm --filter @classpulse/backend test` | **26/26 passed** |
+| Frontend | `pnpm --filter @classpulse/frontend test` | **13/13 passed** (added the note about the fallback AI source and the elapsed task time) |
+| Device simulator | `pnpm --filter @classpulse/device-simulator test` | **7/7 passed** |
+| Firmware C logic | `pnpm test:firmware` | **5/5 groups passed** (added the multiple-answer selection group) |
+| PostgreSQL integration | `pnpm test:integration` | **16/16 passed** (10 old + 6 new) |
+| Migration on old data | migrate the old schema, insert A–D data, run the new migration | **Passed**: answers kept, the old enum dropped, no schema drift, CHECK rejects a wrong key |
+| HTTP smoke + local fake Gemini/Claude API | 24 steps: upload course material, generate questions by ratio, approve/reject, import TXT/Word/Excel/CSV/PDF, AI recognition, paper review, bank, classes, exams, ownership; run once with the `@google/genai` SDK and once with the Anthropic SDK | **24/24 passed** with both (run before the automatic fallback to Ollama was added; that mechanism is covered by a unit test with the real Anthropic SDK and a fake server returning 429) |
+| Real AI through Ollama 0.40.3 + `qwen3:4b-instruct`, CPU only (16-thread laptop, 14 GB RAM) | 4 tasks through the backend API; see the section below | **4/4 tasks ran**; quality is uneven, see below |
+| Real UI (Chromium 147, production build) | 10 scenarios on the interface, checking console errors and failed requests | **10/10 passed, no errors** |
+| Existing end-to-end with a real EMQX | `scripts/tests/e2e.ts` | **10/10 groups passed** |
+| Browser simulator ↔ EMQX ↔ backend | a multiple-answer question choosing C, A → sends `AC`; a single-answer question | **Passed**, both graded correctly |
+| Build | `pnpm build`, backend/frontend images | **Passed**; the backend image migrates an empty database and starts |
 
-Chưa kiểm thử: lời gọi Gemini và Claude thật (máy kiểm thử không có GEMINI_API_KEY/ANTHROPIC_API_KEY; request, stream, structured output và việc tự chuyển sang Ollama được kiểm bằng API giả lập), Ollama trên GPU, build/flash ESP-IDF và Arduino trên board thật.
+Not tested: real Gemini and Claude calls (the test machine has no GEMINI_API_KEY/ANTHROPIC_API_KEY; the request, stream, structured output and automatic fallback to Ollama were tested with fake APIs), Ollama on a GPU, and building/flashing ESP-IDF and Arduino on a real board.
 
-### AI thật với Ollama, chỉ CPU
+### Real AI with Ollama, CPU only
 
-Ollama 0.40.3, `qwen3:4b-instruct` (2,5 GB), `OLLAMA_NUM_CTX=32768`; laptop 16 luồng CPU, 14 GB RAM, driver NVIDIA không hoạt động nên chạy hoàn toàn trên CPU. Mỗi tác vụ được gọi qua API backend giống giao diện, với PostgreSQL tạm thời.
+Ollama 0.40.3, `qwen3:4b-instruct` (2.5 GB), `OLLAMA_NUM_CTX=32768`; a 16-thread CPU laptop with 14 GB RAM; the NVIDIA driver was not working so everything ran on the CPU. Each task was called through the backend API just like the interface does, with a temporary PostgreSQL.
 
-| Tác vụ | Token vào / ra | Thời gian | Kết quả |
+| Task | Tokens in / out | Time | Result |
 |---|---|---|---|
-| Tạo 6 câu (2 dễ, 2 trung bình, 2 khó, 20% nhiều đáp án) từ giáo trình Word 2 chương | 1.799 / 1.915 | 368 s | 6 câu đúng kiến thức, đáp án đúng, tiếng Việt tự nhiên, tất cả chờ duyệt. Lỗi: viết 3 câu nhiều đáp án thay vì 1, đáp án dồn vào A/B, một câu lộ đáp án. Đã sửa bằng kế hoạch từng câu (độ khó, loại, vị trí đáp án chia đều A–D) trong yêu cầu; chạy lại: 361 s, độ khó 2/2/2, đúng 1 câu nhiều đáp án (ACD), đáp án các câu một lựa chọn C, A, B, D, A. Còn lại: một câu vẫn trích nguyên phương án đúng vào đề bài, một lời giải nhắc chữ cái phương án — giáo viên sửa khi duyệt |
-| Nhận dạng đề lộn xộn 3 câu (`a/`, `(A)`, `A-`, bảng đáp án cuối đề) | 743 / 562 | 84 s | Đủ 3 câu, đáp án B, A, BC, câu 3 là câu nhiều đáp án. Có một ghi chú rác ("Câu "), nay được lọc |
-| Đánh giá đề cài sẵn lỗi (câu mơ hồ, hai đáp án đúng, sai khóa, nhiễu yếu, hai câu trùng) | 1.382 / 2.609 | 440 s | Bắt đúng câu 1 mơ hồ, câu 4 nhiễu vô lý, câu 4–5 trùng. Bỏ sót câu 2 (8883 cũng là cổng MQTT) và câu 3 sai khóa; còn kết luận sai rằng QoS 2 có 3 bước. Mô hình 4B không đủ tin cậy để kiểm tra kiến thức trong đề — nên dùng Gemini cho chức năng này |
-| Phân tích kết quả buổi học 24 sinh viên (dữ liệu giả lập) | 1.438 / 1.375 | 262 s | Nêu đúng KR-20 âm, các câu có phương án nhiễu được chọn nhiều hơn đáp án, câu quá dễ và nhiễu không ai chọn, kèm gợi ý dạy lại; chưa nhận ra 8883 cũng là cổng MQTT hợp lệ |
+| Generate 6 questions (2 easy, 2 medium, 2 hard, 20 % multiple-answer) from a 2-chapter Word course document | 1,799 / 1,915 | 368 s | 6 questions with correct knowledge and answers, natural Vietnamese, all waiting for review. Problems: it wrote 3 multiple-answer questions instead of 1, the answers clustered on A/B, and one question gave its answer away. Fixed with a per-question plan (difficulty, type, correct-answer position spread evenly over A–D) in the request; rerun: 361 s, difficulty 2/2/2, exactly 1 multiple-answer question (ACD), single-choice answers C, A, B, D, A. Remaining: one question still quotes the correct option verbatim in the stem and one explanation mentions an option letter — the teacher fixes these on review |
+| Recognise a messy 3-question paper (`a/`, `(A)`, `A-`, an answer table at the end) | 743 / 562 | 84 s | All 3 questions, answers B, A, BC, question 3 is a multiple-answer question. There was one junk note ("Câu "), which is now filtered out |
+| Review a paper with planted errors (an ambiguous question, two correct answers, a wrong key, a weak distractor, two duplicate questions) | 1,382 / 2,609 | 440 s | Caught the ambiguous question 1, the absurd distractor in question 4 and the duplicates 4–5. Missed question 2 (8883 is also an MQTT port) and the wrong key in question 3; it also wrongly concluded that QoS 2 has 3 steps. The 4B model is not reliable enough to check the knowledge in a paper — use Gemini for this feature |
+| Analyse the results of a lesson with 24 students (simulated data) | 1,438 / 1,375 | 262 s | Correctly reported a negative KR-20, questions where a distractor was chosen more than the answer, a question that was too easy and a distractor nobody chose, with suggestions for reteaching; it did not realise 8883 is also a valid MQTT port |
 
-Bộ nhớ: nạp với ngữ cảnh f16 mô hình chiếm 7,6 GB và đẩy máy vào swap; với `OLLAMA_KV_CACHE_TYPE=q8_0` còn 5,3 GB (đã đặt trong service `ollama` của compose). Khi tiến trình Ollama bị dừng giữa chừng, tác vụ báo "Ollama dừng giữa chừng, thường do máy chủ không đủ RAM…" thay vì lỗi JSON khó hiểu.
+Memory: loaded with an f16 context the model takes 7.6 GB and pushes the machine into swap; with `OLLAMA_KV_CACHE_TYPE=q8_0` it takes 5.3 GB (set in the `ollama` service of the compose file). When the Ollama process is killed midway, the task reports "Ollama stopped midway, usually because the server does not have enough RAM…" instead of a confusing JSON error.
 
 ---
 
+Application test date: **29 Sep 2026**; firmware was added and the unit tests/build were rerun on **30 Sep 2026**. The Codex execution environment has no Docker daemon, so the runtime services were run directly as PostgreSQL 18.6 and EMQX Community 5.8.8. The Compose configuration was rendered and checked with Docker Compose CLI v2.39.4; building/starting all the containers has to be run again on a machine with Docker.
 
-Ngày kiểm thử ứng dụng: **29/09/2026**; bổ sung firmware và chạy lại unit/build ngày **30/09/2026**. Môi trường thực thi của Codex không có Docker daemon, nên dịch vụ runtime được chạy trực tiếp bằng PostgreSQL 18.6 và EMQX Community 5.8.8. Cấu hình Compose đã được render và kiểm tra bằng Docker Compose CLI v2.39.4; việc build/start toàn bộ container cần được chạy lại trên máy có Docker.
+## Final results
 
-## Kết quả cuối
-
-| Nhóm | Lệnh / cách kiểm tra | Kết quả |
+| Group | Command / how it was checked | Result |
 |---|---|---|
-| MQTT contracts + thống kê | `pnpm --filter @classpulse/mqtt-contracts test` | **7/7 đạt** |
-| Backend unit | `pnpm --filter @classpulse/backend test` | **8/8 đạt** |
-| Frontend component/hooks | `pnpm --filter @classpulse/frontend test` | **11/11 đạt** |
-| Device simulator logic | `pnpm --filter @classpulse/device-simulator test` | **6/6 đạt** |
-| ESP32 firmware logic | `pnpm test:firmware` | **4/4 nhóm đạt** |
-| PostgreSQL integration | `pnpm test:integration` với database đã migrate | **9/9 đạt** |
-| End-to-end thật | `node --import tsx scripts/tests/e2e.ts` | **10/10 nhóm đạt** |
-| Load generator | 50 thiết bị, duplicate bật, delay tối đa 100 ms | **50 join + 50 answer, 0 reject, 0 timeout** |
-| Production build | `pnpm build` | **Đạt** |
-| Compose schema | `docker compose --env-file .env.example config --quiet` | **Đạt** |
-| Kiểm tra UI thật | in-app Chromium trên Vite + API + EMQX + PostgreSQL | **Đạt** |
+| MQTT contracts + statistics | `pnpm --filter @classpulse/mqtt-contracts test` | **7/7 passed** |
+| Backend unit | `pnpm --filter @classpulse/backend test` | **8/8 passed** |
+| Frontend components/hooks | `pnpm --filter @classpulse/frontend test` | **11/11 passed** |
+| Device simulator logic | `pnpm --filter @classpulse/device-simulator test` | **6/6 passed** |
+| ESP32 firmware logic | `pnpm test:firmware` | **4/4 groups passed** |
+| PostgreSQL integration | `pnpm test:integration` with a migrated database | **9/9 passed** |
+| Real end-to-end | `node --import tsx scripts/tests/e2e.ts` | **10/10 groups passed** |
+| Load generator | 50 devices, duplicates on, maximum delay 100 ms | **50 joins + 50 answers, 0 rejected, 0 timeouts** |
+| Production build | `pnpm build` | **Passed** |
+| Compose schema | `docker compose --env-file .env.example config --quiet` | **Passed** |
+| Real UI check | in-app Chromium on Vite + API + EMQX + PostgreSQL | **Passed** |
 
-Tổng unit/component test TypeScript/React: **32/32 đạt**, cộng **4/4 nhóm** logic firmware C. Build production sinh bundle chính khoảng 285 kB và simulator lazy chunk khoảng 436 kB trước gzip; Vite không báo lỗi build.
+Total TypeScript/React unit/component tests: **32/32 passed**, plus **4/4 groups** of C firmware logic. The production build produces a main bundle of about 285 kB and a lazy simulator chunk of about 436 kB before gzip; Vite reports no build errors.
 
-Test firmware host biên dịch `classpulse_logic.c` với `cc -std=c11 -Wall -Wextra -Werror`, rồi kiểm tra luồng nhập room/student, Xóa/Confirm, chọn A–D, cuộn mã chẵn/lẻ theo cặp, giới hạn sequence và validation deviceId. Phần phụ thuộc ESP-IDF/BLE/Wi-Fi/GPIO cần toolchain và board thật để build/flash.
+The host firmware test compiles `classpulse_logic.c` with `cc -std=c11 -Wall -Wextra -Werror`, then checks the room/student entry flow, Clear/Confirm, choosing A–D, scrolling even/odd codes in pairs, the sequence limit and deviceId validation. The parts that depend on ESP-IDF/BLE/Wi-Fi/GPIO need the toolchain and a real board to build/flash.
 
-## Phạm vi integration backend
+## Backend integration scope
 
-Bộ `services.integration.test.ts` chạy với PostgreSQL thật và kiểm tra:
+The `services.integration.test.ts` suite runs against a real PostgreSQL and checks:
 
-- đăng ký, đăng nhập, xác minh JWT, refresh rotation và phát hiện replay;
-- giáo viên khác không đọc/sửa quiz hoặc điều khiển session;
-- session giữ snapshot câu hỏi sau khi quiz gốc được sửa/xóa;
-- join hợp lệ, phòng không tồn tại, trùng studentCode/deviceId;
-- nhận đủ A/B/C/D, chỉ tính answer có sequence mới nhất;
-- từ chối answer sai, thiết bị chưa join, questionId sai, quá deadline;
-- hai delivery QoS 1 đồng thời chỉ ghi một lần; requestId dùng lại với payload khác bị từ chối;
-- 50 thiết bị ghi gần đồng thời không mất answer;
-- snapshot sau reload giữ deadline; timer được phục hồi sau restart logic và tự next/finish.
+- registration, login, JWT verification, refresh rotation and replay detection;
+- another teacher cannot read/edit a quiz or control a session;
+- a session keeps its question snapshot after the original quiz is edited/deleted;
+- a valid join, a non-existent room, a duplicate studentCode/deviceId;
+- receiving every A/B/C/D, counting only the answer with the newest sequence;
+- rejecting a wrong answer, a device that has not joined, a wrong questionId and a deadline overrun;
+- two simultaneous QoS 1 deliveries write only once; a requestId reused with a different payload is rejected;
+- 50 devices writing almost at the same time lose no answers;
+- a snapshot after a reload keeps the deadline; the timer is recovered after a logic restart and advances/finishes by itself.
 
-Tests tạo teacher/quiz/session/device riêng bằng UUID rồi xóa đúng dữ liệu test. Dữ liệu seed/demo không được reset.
+The tests create their own teacher/quiz/session/device with UUIDs and then delete exactly that test data. The seed/demo data is not reset.
 
-## Phạm vi end-to-end
+## End-to-end scope
 
-Script `scripts/tests/e2e.ts` dùng REST API đang chạy, MQTT TCP qua EMQX, PostgreSQL, và Socket.IO thật. Mười nhóm đã đạt:
+The script `scripts/tests/e2e.ts` uses the running REST API, MQTT TCP through EMQX, PostgreSQL and a real Socket.IO. Ten groups passed:
 
-1. Register/login/profile, refresh cookie xoay và logout thu hồi refresh.
-2. Quyền sở hữu quiz/session và snapshot không đổi khi sửa quiz.
-3. Socket.IO xác thực, cho chủ sở hữu join room và từ chối giáo viên khác.
-4. Join phòng lỗi/thành công, topic-deviceId mismatch và duplicate join.
-5. Thống kê 0 an toàn, correctAnswer bị ẩn, retained question và deadline server.
-6. Đổi A/B/C/D, duplicate request, stale sequence, answer/question/device không hợp lệ.
-7. 50 MQTT device join và answer gần đồng thời, realtime đạt đủ 51/51 khi cộng thiết bị kiểm thử chính.
-8. Close khóa answer mới, công bố correct/wrong; manual next và finish.
-9. TIMER tự close, chờ kết quả, mở câu sau và finish không cần browser.
-10. Logout làm refresh cookie cũ không dùng lại được.
+1. Register/login/profile, the refresh cookie rotating and logout revoking the refresh token.
+2. Ownership of quizzes/sessions and a snapshot that does not change when the quiz is edited.
+3. Socket.IO authentication, letting the owner join the room and rejecting another teacher.
+4. A failing/successful room join, a topic–deviceId mismatch and a duplicate join.
+5. Safe 0 statistics, a hidden correctAnswer, the retained question and the server deadline.
+6. Changing A/B/C/D, a duplicate request, a stale sequence, an invalid answer/question/device.
+7. 50 MQTT devices join and answer almost at the same time, with realtime reaching 51/51 when the main test device is added.
+8. Close locks new answers and publishes correct/wrong; manual next and finish.
+9. TIMER closes by itself, waits to show the result, opens the next question and finishes without a browser.
+10. Logout makes the old refresh cookie unusable.
 
-## Kết quả load generator độc lập
+## Independent load generator result
 
-Lệnh đã chạy trên phòng thật đang `QUESTION_ACTIVE`:
+The command was run against a real room that was `QUESTION_ACTIVE`:
 
 ```bash
 node --import tsx scripts/simulate-devices/index.ts \
   --devices=50 --room=123456 --duplicates --delay=100
 ```
 
-Kết quả:
+Result:
 
 ```json
 {
@@ -127,39 +126,39 @@ Kết quả:
 }
 ```
 
-`accepted=200` gồm 50 join, 50 answer và 100 duplicate ACK có `success=true`/`originalCode` đúng. Database/realtime vẫn chỉ có 50 participant và 50 answer mới từ lần chạy này.
+`accepted=200` consists of 50 joins, 50 answers and 100 duplicate ACKs with `success=true` and the right `originalCode`. The database/realtime still show only 50 new participants and 50 new answers from this run.
 
-## Kiểm tra broker và ACL
+## Broker and ACL checks
 
-Kiểm tra trực tiếp với EMQX 5.8.8 đã xác nhận:
+A direct test against EMQX 5.8.8 confirmed:
 
-- kết nối anonymous bị từ chối;
-- simulator subscribe ACK của chính clientId được phép;
-- simulator subscribe ACK của device khác bị từ chối;
-- simulator không thể publish giả ACK;
-- backend kết nối bằng credential riêng, subscribe các topic thiết bị và publish retained room state;
-- browser MQTT over WebSocket kết nối được tại `/mqtt` và nhận ACK QoS 1.
+- an anonymous connection is refused;
+- the simulator may subscribe to its own clientId's ACK;
+- the simulator's subscription to another device's ACK is refused;
+- the simulator cannot publish a forged ACK;
+- the backend connects with its own credential, subscribes to the device topics and publishes the retained room state;
+- browser MQTT over WebSocket connects at `/mqtt` and receives a QoS 1 ACK.
 
-## Kiểm tra UI bằng trình duyệt
+## Browser UI check
 
-Luồng demo đã thao tác trực tiếp:
+The demo flow was operated directly:
 
-- đăng nhập `demo@classpulse.local` và tải dashboard từ API;
-- mở phòng `123456`, đổi thời lượng câu tiếp theo thành 120 giây;
-- simulator hiển thị đúng keypad 4×4 và hai LED 7 đoạn;
-- nhập roomCode, studentCode `20260001`, nhận `JOIN_ACCEPTED` trong 51 ms;
-- giáo viên thấy participant realtime, start câu; simulator nhận retained question/deadline;
-- chọn B, Xóa, chọn A rồi Confirm; nhận `ANSWER_ACCEPTED` trong 50 ms;
-- dashboard chuyển 0/1 thành 1/1 mà không lộ lựa chọn cá nhân khi câu còn mở;
-- presentation reload vẫn giữ câu và countdown server;
-- sau load 50 device, control/presentation hiển thị 51/51;
-- close công bố đáp án A, phân phối A/B/C/D và đúng/sai; presentation cập nhật realtime.
+- log in as `demo@classpulse.local` and load the dashboard from the API;
+- open room `123456` and change the next question's duration to 120 seconds;
+- the simulator shows the 4×4 keypad and the two 7-segment LEDs correctly;
+- enter the roomCode and studentCode `20260001`, and receive `JOIN_ACCEPTED` in 51 ms;
+- the teacher sees the participant in realtime and starts the question; the simulator receives the retained question/deadline;
+- choose B, Clear, choose A and then Confirm; receive `ANSWER_ACCEPTED` in 50 ms;
+- the dashboard changes 0/1 to 1/1 without exposing an individual's choice while the question is open;
+- reloading the presentation still keeps the question and the server countdown;
+- after the 50-device load, control/presentation show 51/51;
+- close publishes answer A, the A/B/C/D distribution and correct/wrong; the presentation updates in realtime.
 
-## Điểm chưa xác minh trong môi trường này
+## Points not verified in this environment
 
-Chưa thể chạy `docker compose up --build` vì host kiểm thử không có Docker daemon. Đã xác minh Compose render đủ 5 service (`postgres`, `broker-config`, `emqx`, `backend`, `frontend`), volume, healthcheck và port; Dockerfiles/Compose vẫn cần một smoke run trên máy đích có Docker. Môi trường cũng không có ESP-IDF hoặc board ESP32, nên firmware chưa được `idf.py build`, flash hay đo điện trên phần cứng thật; chỉ phần logic độc lập đã được biên dịch và chạy trên host.
+`docker compose up --build` could not be run because the test host has no Docker daemon. It was verified that Compose renders all 5 services (`postgres`, `broker-config`, `emqx`, `backend`, `frontend`), the volumes, the healthchecks and the ports; the Dockerfiles/Compose still need a smoke run on a target machine that has Docker. The environment also has no ESP-IDF or ESP32 board, so the firmware has not been through `idf.py build`, flashing or electrical measurement on real hardware; only the standalone logic was compiled and run on the host.
 
-Sau khi clone trên máy đích, tiêu chí chấp nhận ngắn nhất là:
+After cloning on the target machine, the shortest acceptance criterion is:
 
 ```bash
 cp .env.example .env
@@ -169,4 +168,4 @@ docker compose ps
 curl -f http://localhost:3000/api/health
 ```
 
-Sau đó chạy `pnpm test:e2e` theo README và thử một tab simulator qua `http://localhost/device-simulator`.
+Then run `pnpm test:e2e` as described in the README and try one simulator tab through `http://localhost/device-simulator`.

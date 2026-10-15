@@ -1,70 +1,70 @@
-# Giao thức MQTT ClassPulse v1
+# ClassPulse MQTT protocol v1
 
-Nguồn kiểu dữ liệu và validation dùng chung: `packages/mqtt-contracts/src/index.ts`; kiểu câu hỏi và trạng thái: `packages/shared-types/src/index.ts`. Backend là nơi duy nhất quyết định quyền tham gia, thời gian và đáp án hợp lệ. Simulator và ESP32 không kết nối PostgreSQL, không gửi thống kê trực tiếp tới web giáo viên.
+The shared source of the data types and validation is `packages/mqtt-contracts/src/index.ts`; the question and state types are in `packages/shared-types/src/index.ts`. The backend is the only place that decides who may take part, the timing and which answers are valid. The simulator and the ESP32 do not connect to PostgreSQL and do not send statistics directly to the teacher web app.
 
-Firmware ESP-IDF hiện thực giao thức này ở [`apps/firmware`](../apps/firmware/README.md). Credential Wi-Fi/MQTT được ghi qua BLE GATT và lưu NVS, không hard-code trong source. Firmware subscribe ACK trước khi gửi join, dùng QoS 1, giữ nguyên request khi retry và lưu pending request/sequence qua reset.
+The ESP-IDF firmware implements this protocol in [`apps/firmware`](../apps/firmware/README.md). The Wi-Fi/MQTT credentials are written over BLE GATT and stored in NVS, not hard-coded in the source. The firmware subscribes to the ACK before sending a join, uses QoS 1, keeps the request unchanged on a retry and stores the pending request/sequence across resets.
 
-## Broker và danh tính
+## Broker and identity
 
-- MQTT TCP: `mqtt://localhost:1883`; MQTT over WebSocket cho trình duyệt: `ws://localhost:8083/mqtt`.
-- Frontend triển khai HTTPS cần endpoint `wss://` có chứng chỉ hợp lệ.
-- Trong Docker, backend dùng hostname `emqx`; trình duyệt dùng hostname có thể truy cập từ máy người dùng.
-- Tài khoản phát triển cho simulator: `simulator` / `simulator-dev-only`. Đây là credential phát triển công khai, không phải tài khoản quản trị EMQX.
-- Anonymous bị tắt. Backend có tài khoản riêng để nhận các topic thiết bị và xuất ACK/trạng thái.
-- MQTT `clientId` phải chính xác bằng `deviceId`. Mỗi tab/thiết bị có ID riêng, từ 3 đến 64 ký tự thuộc `[a-zA-Z0-9_-]`.
-- ACL simulator chỉ cho publish `quiz/v1/devices/${clientid}/join`, `/answer`, `/status`; subscribe `/ack`, `/command` của chính clientId và topic `/question`, `/state` của phòng. Không được publish ACK, trạng thái phòng, command hoặc topic thiết bị khác. Mặc định từ chối các quyền còn lại.
-- ACL dựa trên `${clientid}` cùng một credential chia sẻ chỉ đủ cho môi trường phát triển: người biết mật khẩu có thể tự chọn clientId của thiết bị khác. Production phải provision danh tính riêng cho từng thiết bị và ràng buộc username/chứng chỉ với clientId (mTLS hoặc cơ chế xác thực HTTP/JWT phù hợp), giới hạn quyền đọc theo phòng được cấp. Thay toàn bộ mật khẩu mẫu trước khi triển khai.
+- MQTT TCP: `mqtt://localhost:1883`; MQTT over WebSocket for browsers: `ws://localhost:8083/mqtt`.
+- A frontend deployed over HTTPS needs a `wss://` endpoint with a valid certificate.
+- Inside Docker the backend uses the hostname `emqx`; browsers use a hostname that the user's machine can reach.
+- The development account for the simulator: `simulator` / `simulator-dev-only`. This is a public development credential, not an EMQX admin account.
+- Anonymous access is off. The backend has its own account to receive the device topics and publish ACKs/state.
+- The MQTT `clientId` must be exactly the `deviceId`. Each tab/device has its own ID, 3 to 64 characters from `[a-zA-Z0-9_-]`.
+- The simulator ACL only allows publishing to `quiz/v1/devices/${clientid}/join`, `/answer` and `/status`; subscribing to its own clientId's `/ack` and `/command` and to the room's `/question` and `/state` topics. It may not publish ACKs, room state, commands or another device's topics. All other permissions are denied by default.
+- An ACL based on `${clientid}` with one shared credential is only enough for development: anyone who knows the password can choose another device's clientId. Production must provision a separate identity for each device and bind the username/certificate to the clientId (mTLS or a suitable HTTP/JWT authentication mechanism), and limit read access to the rooms that were granted. Replace every sample password before deploying.
 
-Web simulator đọc `VITE_MQTT_WS_URL`, `VITE_MQTT_USERNAME`, `VITE_MQTT_PASSWORD` (cũng hỗ trợ alias `VITE_MQTT_SIMULATOR_USERNAME`, `VITE_MQTT_SIMULATOR_PASSWORD`) tại thời điểm build, hoặc cấu hình trực tiếp trong trang. Mọi biến `VITE_` đều có thể đọc được từ trình duyệt; tuyệt đối không dùng credential quản trị/backend.
+The web simulator reads `VITE_MQTT_WS_URL`, `VITE_MQTT_USERNAME` and `VITE_MQTT_PASSWORD` (the aliases `VITE_MQTT_SIMULATOR_USERNAME` and `VITE_MQTT_SIMULATOR_PASSWORD` are also supported) at build time, or is configured directly on the page. Every `VITE_` variable can be read from the browser; never use an admin/backend credential.
 
-## Provision thiết bị cho production
+## Provisioning devices for production
 
-Repo có lệnh provision tài khoản riêng cho từng thiết bị:
+The repo has a command that provisions a separate account for each device:
 
 ```bash
-MQTT_DEVICE_PASSWORD='<mật-khẩu-riêng-ít-nhất-12-ký-tự>' pnpm provision --deviceId=device-001
+MQTT_DEVICE_PASSWORD='<own-password-of-at-least-12-characters>' pnpm provision --deviceId=device-001
 ```
 
-Lệnh chạy từ máy quản trị, nạp `.env`, dùng `EMQX_DASHBOARD_USER` / `EMQX_DASHBOARD_PASSWORD` để gọi API quản trị (`EMQX_API_URL`, mặc định `http://127.0.0.1:18083/api/v5`). Credential quản trị không đưa vào frontend. Thiết bị được cấp `username=device-001`, `clientId=device-001`, cùng mật khẩu riêng trong `MQTT_DEVICE_PASSWORD`.
+The command runs from an administrator's machine, loads `.env` and uses `EMQX_DASHBOARD_USER` / `EMQX_DASHBOARD_PASSWORD` to call the management API (`EMQX_API_URL`, default `http://127.0.0.1:18083/api/v5`). The admin credential is never put in the frontend. The device receives `username=device-001`, `clientId=device-001` and the separate password in `MQTT_DEVICE_PASSWORD`.
 
-ACL cho tài khoản `device-*` ràng buộc topic với **`${username}` đã xác thực**, thay vì `${clientid}` do client tự chọn. Vì vậy thay clientId không cấp quyền publish/subscribe topic thiết bị khác. Quyền đọc snapshot phòng hiện dùng `rooms/+`; nếu nội dung lớp cần bảo mật, bổ sung authorization động theo phòng. Đặt `MQTT_SIMULATOR_ENABLED=false` để tắt tài khoản phát triển chia sẻ khi dùng thiết bị provision. Dùng TLS cho MQTT/WebSocket và đổi credential mẫu trước khi triển khai.
+The ACL for `device-*` accounts binds the topics to the **authenticated `${username}`** instead of the `${clientid}` that the client chooses itself. Changing the clientId therefore does not grant permission to publish/subscribe to another device's topics. Permission to read a room snapshot currently uses `rooms/+`; if the class content must be confidential, add dynamic per-room authorization. Set `MQTT_SIMULATOR_ENABLED=false` to turn off the shared development account when using provisioned devices. Use TLS for MQTT/WebSocket and change the sample credentials before deploying.
 
 ## Topics
 
-| Topic | Bên gửi → nhận | QoS | Retain |
+| Topic | Sender → receiver | QoS | Retain |
 |---|---|---:|---|
-| `quiz/v1/devices/{deviceId}/join` | Thiết bị → backend | 1 | false |
-| `quiz/v1/devices/{deviceId}/answer` | Thiết bị → backend | 1 | false |
-| `quiz/v1/devices/{deviceId}/status` | Thiết bị → backend | 1 | false |
-| `quiz/v1/devices/{deviceId}/ack` | Backend → thiết bị | 1 | false |
-| `quiz/v1/devices/{deviceId}/command` | Backend → thiết bị | 1 | false |
-| `quiz/v1/rooms/{roomCode}/question` | Backend → thiết bị | 1 | true |
-| `quiz/v1/rooms/{roomCode}/state` | Backend → thiết bị | 1 | true |
+| `quiz/v1/devices/{deviceId}/join` | Device → backend | 1 | false |
+| `quiz/v1/devices/{deviceId}/answer` | Device → backend | 1 | false |
+| `quiz/v1/devices/{deviceId}/status` | Device → backend | 1 | false |
+| `quiz/v1/devices/{deviceId}/ack` | Backend → device | 1 | false |
+| `quiz/v1/devices/{deviceId}/command` | Backend → device | 1 | false |
+| `quiz/v1/rooms/{roomCode}/question` | Backend → device | 1 | true |
+| `quiz/v1/rooms/{roomCode}/state` | Backend → device | 1 | true |
 
-`command` gửi kết quả riêng cho thiết bị khi phiên kết thúc. Hai topic phòng mang **cùng cấu trúc `RoomState`** để thiết bị vừa kết nối có đủ snapshot từ retained message. Không retain join/answer/ACK/command để tránh thực thi lại thao tác cũ khi subscribe. Thiết bị bỏ snapshot có `serverTimestamp` cũ hơn snapshot đã nhận.
+`command` sends a private result to a device when the session ends. The two room topics carry the **same `RoomState` structure** so a device that has just connected gets a full snapshot from the retained message. Join/answer/ACK/command are not retained, to avoid re-running an old operation on subscribe. A device drops a snapshot whose `serverTimestamp` is older than the one it already received.
 
-Khi phiên chuyển sang `FINISHED`, backend publish lên topic command của từng thiết bị:
+When the session moves to `FINISHED`, the backend publishes to each device's command topic:
 
 ```json
 {"type":"RESULT","roomCode":"123456","score":8,"correct":4,"total":5,"serverTimestamp":"2026-09-29T09:05:00.000Z"}
 ```
 
-`score` là điểm thang 10, làm tròn số nguyên để hiển thị vừa hai digit. Firmware chỉ nhận kết quả trùng `roomCode` đang tham gia. Sau khi xem điểm, nhấn `*` để xóa trạng thái phiên và nhập mã phòng mới.
+`score` is the score out of 10, rounded to an integer so it fits on two digits. The firmware only accepts a result whose `roomCode` matches the room it joined. After viewing the score, press `*` to clear the session state and enter a new room code.
 
-Thiết bị phải subscribe topic ACK của mình **trước khi** publish join. Subscribe state/question của phòng khi đã nhập roomCode; chỉ coi đã tham gia sau ACK thành công.
+A device must subscribe to its own ACK topic **before** publishing a join. It subscribes to the room's state/question once the roomCode is entered; it only counts as joined after a successful ACK.
 
-## JSON và trường chung
+## JSON and common fields
 
-UTF-8 JSON object, không chấp nhận trường lạ. Trường bắt buộc của mọi message thiết bị:
+UTF-8 JSON objects; unknown fields are not accepted. Fields required on every device message:
 
-| Trường | Quy tắc |
+| Field | Rule |
 |---|---|
-| `requestId` | UUID; mới cho mỗi thao tác người dùng, giữ nguyên khi retry cùng thao tác |
-| `deviceId` | Trùng ID trong topic và danh tính client được broker cấp phép |
-| `roomCode` | Chuỗi đúng 6 chữ số, giữ số 0 ở đầu |
-| `clientTimestamp` | ISO-8601 có múi giờ; chỉ dùng để chẩn đoán |
+| `requestId` | A UUID; new for each user action, unchanged when retrying the same action |
+| `deviceId` | Equal to the ID in the topic and to the client identity the broker authorised |
+| `roomCode` | A string of exactly 6 digits, keeping a leading 0 |
+| `clientTimestamp` | ISO-8601 with a time zone; used for diagnostics only |
 
-Server dùng thời gian của server/database để xét deadline. Không thể gia hạn bằng việc sửa đồng hồ thiết bị. Topic phải khớp chính xác mẫu và `deviceId` trong payload phải trùng topic; sai khác trả `INVALID_PAYLOAD`.
+The server uses the server/database time to decide the deadline. It cannot be extended by changing the device clock. The topic must match the pattern exactly and the `deviceId` in the payload must match the topic; a mismatch returns `INVALID_PAYLOAD`.
 
 ### Join
 
@@ -80,7 +80,7 @@ Topic: `quiz/v1/devices/device-001/join`.
 }
 ```
 
-`studentCode` gồm 1–32 ký tự `[A-Za-z0-9_-]`. Backend hỗ trợ mã chữ/số để phần cứng tương lai có thể nhập qua cấu hình; keypad MVP nhập mã **dạng số**. Một thiết bị và một mã sinh viên chỉ ánh xạ tới một participant trong session. Join lại cùng thông tin là an toàn; đổi mã sinh viên trên cùng thiết bị trong session bị từ chối để bảo vệ danh tính đáp án.
+`studentCode` is 1–32 characters from `[A-Za-z0-9_-]`. The backend supports alphanumeric codes so future hardware can enter them through configuration; the MVP keypad enters **numeric** codes. One device and one student code map to only one participant in a session. Joining again with the same information is safe; changing the student code on the same device within a session is rejected to protect the identity behind the answers.
 
 ### Answer
 
@@ -98,9 +98,9 @@ Topic: `quiz/v1/devices/device-001/answer`.
 }
 ```
 
-`answer` là **khóa chuẩn**: một chữ `A`–`D`, hoặc với câu nhiều đáp án (`currentQuestion.type = "MULTIPLE"`) nhiều chữ theo thứ tự bảng chữ cái, không lặp (`AC`, `ABD`). Thiết bị cũ chỉ gửi một chữ vẫn hợp lệ. Khóa sai thứ tự (`CA`), lặp chữ hoặc ký tự khác bị `INVALID_ANSWER`; gửi nhiều chữ cho câu `SINGLE` cũng bị `INVALID_ANSWER`. Câu nhiều đáp án chỉ được tính đúng khi khóa khớp hoàn toàn. `questionId` là UUID. `sequence` là số nguyên 1–2.147.483.647, tăng dần cho mỗi cặp deviceId/questionId. Một lần Confirm mới tạo requestId mới và sequence lớn hơn; retry cùng lần Confirm giữ nguyên **toàn bộ payload**, gồm requestId, sequence và timestamp.
+`answer` is the **canonical key**: one letter `A`–`D`, or for a multiple-answer question (`currentQuestion.type = "MULTIPLE"`) several letters in alphabetical order without repeats (`AC`, `ABD`). An older device that only sends one letter is still valid. A key in the wrong order (`CA`), with repeated letters or other characters gets `INVALID_ANSWER`; sending several letters for a `SINGLE` question is also `INVALID_ANSWER`. A multiple-answer question counts as correct only when the key matches exactly. `questionId` is a UUID. `sequence` is an integer 1–2,147,483,647 that increases for each deviceId/questionId pair. Each new Confirm creates a new requestId and a larger sequence; a retry of the same Confirm keeps the **entire payload** unchanged, including the requestId, the sequence and the timestamp.
 
-Chỉ nhận khi thiết bị đã join, session đang `QUESTION_ACTIVE`, questionId chính xác và server chưa tới `questionEndsAt`. Đáp án hợp lệ có sequence mới nhất ghi đè đáp án hiện hành; bản ghi chống trùng giữ payload hash và ACK trong database, không lưu toàn bộ nội dung các lần thay đáp án. Message đến đảo thứ tự có sequence thấp hơn không được ghi đè đáp án mới. Khi câu đã đóng, mọi thay đổi mới đều bị từ chối.
+An answer is only accepted when the device has joined, the session is `QUESTION_ACTIVE`, the questionId is exact and the server has not reached `questionEndsAt`. A valid answer with the newest sequence overwrites the current answer; the deduplication record keeps the payload hash and the ACK in the database and does not store the full content of every change of answer. A message that arrives out of order with a lower sequence does not overwrite a newer answer. Once the question has closed, every new change is rejected.
 
 ### Status
 
@@ -114,9 +114,9 @@ Chỉ nhận khi thiết bị đã join, session đang `QUESTION_ACTIVE`, questi
 }
 ```
 
-Status báo trạng thái thiết bị qua pipeline backend; nó không tự tham gia phòng hoặc cấp quyền trả lời. Simulator hiển thị trạng thái kết nối thực của mqtt.js. Chỉ báo Wi-Fi trên web phản ánh `navigator.onLine`, không đo sóng Wi-Fi ESP32.
+Status reports the device state through the backend pipeline; it does not join a room by itself or grant the right to answer. The simulator shows the real connection state of mqtt.js. The Wi-Fi indicator on the web only reflects `navigator.onLine` and does not measure the ESP32's Wi-Fi signal.
 
-## ACK và idempotency
+## ACK and idempotency
 
 ```json
 {
@@ -129,9 +129,9 @@ Status báo trạng thái thiết bị qua pipeline backend; nó không tự tha
 }
 ```
 
-Backend ACK sau khi transaction hoàn tất. MQTT PUBACK chỉ xác nhận broker đã nhận gói tin; **không thay thế** ACK ứng dụng nêu trên. Chỉ báo thành công trên thiết bị sau ACK ứng dụng có cùng requestId. Không dùng trường `message` để xử lý logic, vì nội dung có thể đổi ngôn ngữ.
+The backend sends the ACK after the transaction completes. The MQTT PUBACK only confirms that the broker received the packet; it **does not replace** the application ACK above. A device indicates success only after an application ACK with the same requestId. Do not use the `message` field for logic, since its text may change language.
 
-Bản ghi `ProcessedMqttMessage` với requestId unique ngăn QoS 1/retry làm tăng thống kê hoặc ghi lại đáp án. Khi nhận lại message đã xử lý, trả:
+A `ProcessedMqttMessage` record with a unique requestId stops QoS 1/retries from increasing the statistics or rewriting the answer. When a message that was already processed arrives again, the reply is:
 
 ```json
 {
@@ -144,29 +144,29 @@ Bản ghi `ProcessedMqttMessage` với requestId unique ngăn QoS 1/retry làm t
 }
 ```
 
-`success` phản ánh kết quả gốc; duplicate của một message bị từ chối cũng có `success: false`. Không mặc định xem mọi `DUPLICATE_MESSAGE` là lỗi hoặc là thành công. Dùng `success` cùng `originalCode`. Không tái sử dụng một requestId cho payload/thao tác khác.
+`success` reflects the original result; a duplicate of a rejected message also has `success: false`. Do not assume that every `DUPLICATE_MESSAGE` is an error or a success. Use `success` together with `originalCode`. Do not reuse one requestId for a different payload/action.
 
-Simulator đợi 4 giây rồi retry với requestId không đổi, tối đa 3 lần gửi. Sau khoảng 12 giây không có ACK, trạng thái kết quả là chưa biết; backend có thể đã lưu dù ACK bị mất. Khi kết nối lại, retained room state khôi phục câu hiện tại. Một Confirm mới có sequence lớn hơn nên không bị message retry cũ ghi đè. Firmware production nên lưu request đang chờ và sequence trong NVS để không mất chúng khi reset; web simulator lưu sequence theo deviceId/questionId trong localStorage.
+The simulator waits 4 seconds and then retries with an unchanged requestId, for at most 3 sends. After about 12 seconds without an ACK the outcome is unknown; the backend may have saved the answer even though the ACK was lost. After reconnecting, the retained room state restores the current question. A new Confirm has a larger sequence, so an old retry message does not overwrite it. Production firmware should store the pending request and the sequence in NVS so they survive a reset; the web simulator stores the sequence per deviceId/questionId in localStorage.
 
-| `code` | Ý nghĩa |
+| `code` | Meaning |
 |---|---|
-| `JOIN_ACCEPTED` | Thiết bị đã được liên kết với participant |
-| `ANSWER_ACCEPTED` | Đáp án hiện hành đã lưu |
-| `STATUS_ACCEPTED` | Đã cập nhật trạng thái thiết bị |
-| `INVALID_PAYLOAD` | JSON, schema, topic hoặc ID không hợp lệ |
-| `DEVICE_NOT_JOINED` | Chưa tham gia session |
-| `ROOM_NOT_FOUND` | Không tìm thấy phòng |
-| `SESSION_NOT_ACTIVE` | Session đã kết thúc hoặc không cho phép thao tác |
-| `QUESTION_NOT_ACTIVE` | Câu chưa mở/đã đóng hoặc questionId không khớp |
-| `QUESTION_EXPIRED` | Server đã tới deadline |
-| `INVALID_ANSWER` | Đáp án không phải khóa chuẩn A–D, hoặc nhiều chữ cho câu một đáp án |
-| `DUPLICATE_MESSAGE` | requestId đã xử lý; xem kết quả gốc |
-| `STALE_SEQUENCE` | sequence không mới hơn đáp án hiện hành |
-| `STUDENT_ALREADY_JOINED` | Mã sinh viên đang thuộc thiết bị khác |
-| `DEVICE_ALREADY_JOINED` | Thiết bị đang thuộc mã sinh viên khác |
-| `SERVER_ERROR` | Lỗi backend; kiểm tra kết nối và retry theo chính sách |
+| `JOIN_ACCEPTED` | The device is now linked to a participant |
+| `ANSWER_ACCEPTED` | The current answer was saved |
+| `STATUS_ACCEPTED` | The device state was updated |
+| `INVALID_PAYLOAD` | Invalid JSON, schema, topic or ID |
+| `DEVICE_NOT_JOINED` | Has not joined the session |
+| `ROOM_NOT_FOUND` | The room was not found |
+| `SESSION_NOT_ACTIVE` | The session has ended or does not allow the action |
+| `QUESTION_NOT_ACTIVE` | The question is not open yet/already closed, or the questionId does not match |
+| `QUESTION_EXPIRED` | The server has reached the deadline |
+| `INVALID_ANSWER` | The answer is not a canonical A–D key, or has several letters for a single-answer question |
+| `DUPLICATE_MESSAGE` | The requestId was already processed; see the original result |
+| `STALE_SEQUENCE` | The sequence is not newer than the current answer |
+| `STUDENT_ALREADY_JOINED` | The student code already belongs to another device |
+| `DEVICE_ALREADY_JOINED` | The device already belongs to another student code |
+| `SERVER_ERROR` | Backend error; check the connection and retry according to the policy |
 
-## Retained RoomState / câu hỏi
+## Retained RoomState / question
 
 ```json
 {
@@ -180,11 +180,11 @@ Simulator đợi 4 giây rồi retry với requestId không đổi, tối đa 3 
   "totalQuestions": 3,
   "currentQuestion": {
     "id": "5d44c3d8-817a-438b-9aa1-ac6f99e6d425",
-    "content": "MQTT QoS 1 có đặc điểm nào?",
-    "optionA": "Không gửi lại message",
-    "optionB": "Có thể nhận message nhiều lần",
-    "optionC": "Không cần broker",
-    "optionD": "Chỉ hỗ trợ HTTP",
+    "content": "Which property does MQTT QoS 1 have?",
+    "optionA": "Never resends a message",
+    "optionB": "A message may be received more than once",
+    "optionC": "Needs no broker",
+    "optionD": "Only supports HTTP",
     "type": "SINGLE",
     "durationSeconds": 30,
     "order": 0
@@ -192,34 +192,34 @@ Simulator đợi 4 giây rồi retry với requestId không đổi, tối đa 3 
 }
 ```
 
-`currentQuestion.type` là `SINGLE` hoặc `MULTIPLE`. Với `MULTIPLE`, mỗi phím A–D bật/tắt một chữ và thiết bị gửi khóa đã sắp xếp; LED hiển thị các chữ đã chọn (cuộn theo cặp khi nhiều hơn hai). Lời giải (`explanation`) chỉ hiển thị trên web, không bao giờ gửi xuống thiết bị. Nếu phiên trộn câu/đáp án, `content` và `optionA`–`optionD` đã là thứ tự hiển thị của phiên đó.
+`currentQuestion.type` is `SINGLE` or `MULTIPLE`. For `MULTIPLE`, each A–D key toggles one letter and the device sends the sorted key; the LEDs show the chosen letters (scrolling in pairs when there are more than two). The explanation (`explanation`) is only shown on the web and is never sent to a device. If the session shuffles questions/options, `content` and `optionA`–`optionD` are already in the order shown for that session.
 
-Không có `correctAnswer` khi `QUESTION_ACTIVE`. Sau khi đóng câu, backend có thể cung cấp đáp án đúng để công bố kết quả. Lobby có `currentQuestion: null`, `currentQuestionIndex: -1`, `questionStartedAt: null`, `questionEndsAt: null`. Không suy ra deadline bằng lúc client nhận message retained, vì đó có thể là bản tin từ trước. Đọc tuyệt đối `questionEndsAt`; backend luôn có quyền từ chối nếu đồng hồ thiết bị lệch.
+There is no `correctAnswer` while `QUESTION_ACTIVE`. After a question closes, the backend may supply the correct answer to publish the result. The lobby has `currentQuestion: null`, `currentQuestionIndex: -1`, `questionStartedAt: null` and `questionEndsAt: null`. Do not infer the deadline from the time the client received a retained message, because it may be a message from earlier. Read `questionEndsAt` as an absolute value; the backend always has the right to reject if the device clock is off.
 
-Chu trình trạng thái: `LOBBY → QUESTION_ACTIVE → QUESTION_CLOSED → QUESTION_ACTIVE … → FINISHED`. Cả MANUAL và TIMER đều đóng nhận đáp án khi deadline tới. MANUAL chờ giáo viên chọn câu tiếp; TIMER chờ 3 giây để xem kết quả rồi mở câu tiếp hoặc kết thúc. Sau restart backend, lịch chạy được dựng lại từ deadline trong database.
+State cycle: `LOBBY → QUESTION_ACTIVE → QUESTION_CLOSED → QUESTION_ACTIVE … → FINISHED`. Both MANUAL and TIMER stop accepting answers when the deadline arrives. MANUAL waits for the teacher to choose the next question; TIMER waits 3 seconds to show the result and then opens the next question or finishes. After a backend restart, the schedule is rebuilt from the deadlines in the database.
 
-## Ánh xạ keypad / LED cho firmware
+## Keypad / LED mapping for the firmware
 
 ```text
-1    2    3       A
-4    5    6       B
-7    8    9       C
-Xóa  0    Confirm D
+1      2    3         A
+4      5    6         B
+7      8    9         C
+Clear  0    Confirm   D
 ```
 
-1. Nhập 6 số roomCode; Confirm chuyển sang mã sinh viên. Xóa xóa một số.
-2. Nhập mã sinh viên dạng số; Confirm publish join. ACK thành công chuyển trạng thái sẵn sàng.
-3. A/B/C/D chọn đáp án; chưa gửi. Xóa hủy lựa chọn. Confirm gửi answer cho câu đang mở.
-4. Cho phép thay đổi và Confirm lại trước deadline, tăng sequence.
-5. Hai chữ số LED chỉ hiển thị đồng thời hai ký tự: `123456 → 12 → 34 → 56 → 12`. Mã lẻ được thêm khoảng trắng ở cuối, không thêm số 0. Simulator cuộn mỗi 700 ms.
-6. Ở trạng thái đã join, dấu chấm trái bật; dấu chấm phải nhấp nháy khi chờ ACK. Chưa chọn đáp án thì hiển thị số thứ tự câu (cuộn nếu quá 2 số); khi chọn, hiển thị A/B/C/D (B, D biểu diễn kiểu chữ thường bằng 7 đoạn).
-7. Giữ Xóa 3 giây để xóa danh tính phiên trong NVS và quay lại bước nhập roomCode; thao tác này không xóa credential Wi-Fi/MQTT đã provision qua BLE.
+1. Enter the 6 digits of the roomCode; Confirm moves to the student code. Clear deletes one digit.
+2. Enter the numeric student code; Confirm publishes the join. A successful ACK moves to the ready state.
+3. A/B/C/D choose the answer without sending it. Clear cancels the choice. Confirm sends the answer for the open question.
+4. The choice can be changed and Confirmed again before the deadline, increasing the sequence.
+5. The two LED digits can only show two characters at once: `123456 → 12 → 34 → 56 → 12`. An odd-length code gets a trailing blank, not a 0. The simulator scrolls every 700 ms.
+6. When joined, the left dot is on; the right dot blinks while waiting for an ACK. With no answer chosen it shows the question number (scrolling if there are more than 2 digits); once chosen, it shows A/B/C/D (B and D are drawn as lowercase letters with 7 segments).
+7. Holding Clear for 3 seconds erases the session identity in NVS and returns to roomCode entry; this does not erase the Wi-Fi/MQTT credentials provisioned over BLE.
 
-Mỗi tab mới được cấp ID riêng; reload giữ ID của tab và localStorage lưu sequence. Nhập lại ID cũ bằng cấu hình để mô phỏng reconnect thiết bị đó. Hai client cố dùng cùng clientId có thể bị broker ngắt kết nối luân phiên.
+Each new tab is given its own ID; a reload keeps the tab's ID and localStorage stores the sequence. Enter an old ID in the configuration to simulate that device reconnecting. Two clients that try to use the same clientId may be disconnected by the broker in turn.
 
-## Kiểm thử nhiều thiết bị
+## Multi-device testing
 
-Tạo session, ghi lại mã phòng, rồi chạy:
+Create a session, note the room code, then run:
 
 ```bash
 pnpm simulate --devices=50 --room=123456
@@ -227,8 +227,8 @@ pnpm simulate --devices=50 --room=123456 --duplicates
 MQTT_URL=mqtt://localhost:1883 MQTT_SIMULATOR_USERNAME=simulator MQTT_SIMULATOR_PASSWORD=simulator-dev-only pnpm simulate --devices=50 --room=123456 --duplicates --timeout=90 --delay=1200
 ```
 
-Lệnh `pnpm simulate` nạp `.env` qua `scripts/with-env.mjs`. Script **chỉ** đọc `MQTT_SIMULATOR_USERNAME` / `MQTT_SIMULATOR_PASSWORD` cho tài khoản thiết bị; không dùng `MQTT_USERNAME` / `MQTT_PASSWORD` của backend. Nếu chưa đặt, mặc định là `simulator` / `simulator-dev-only`. `MQTT_URL` chọn broker.
+The `pnpm simulate` command loads `.env` through `scripts/with-env.mjs`. The script reads **only** `MQTT_SIMULATOR_USERNAME` / `MQTT_SIMULATOR_PASSWORD` for the device account; it does not use the backend's `MQTT_USERNAME` / `MQTT_PASSWORD`. If unset, the default is `simulator` / `simulator-dev-only`. `MQTT_URL` selects the broker.
 
-Script tạo danh tính mới cho mỗi lần chạy, subscribe ACK/state trước khi join, đợi giáo viên mở câu hỏi, thêm độ trễ ngẫu nhiên 0–1200 ms, chọn A/B/C/D ngẫu nhiên rồi gửi QoS 1. Mỗi lần chạy trả lời một câu và kết thúc; chạy lại để kiểm thử một lượt mới. `--duplicates` gửi lại payload join và answer đã nhận ACK với cùng requestId để kiểm tra kết quả gốc/idempotency. Script dùng cùng cơ chế retry 4 giây/tối đa 3 lần cho ACK bị mất.
+The script creates a new identity for each run, subscribes to the ACK/state before joining, waits for the teacher to open a question, adds a random delay of 0–1200 ms, chooses A/B/C/D at random and sends it with QoS 1. Each run answers one question and ends; run it again to test a new round. `--duplicates` resends the join and answer payloads that already received an ACK with the same requestId to check the original result/idempotency. The script uses the same retry mechanism (4 seconds, at most 3 times) for a lost ACK.
 
-Kết quả JSON có số connected, joined, answered, accepted, rejected, timeout, duplicateAccepted/Rejected/Unexpected, retries, lỗi transport, phân phối ACK code và độ trễ p50/p95/max. accepted/rejected đếm ACK (kể cả duplicate); joined/answered đếm số thiết bị. Exit code khác 0 khi thiếu join/answer, timeout, ACK lỗi hoặc duplicate sai kết quả. Khi chưa mở câu trong `--timeout` (mặc định 90 giây), run kết thúc với timeout. Không có nhánh ghi thẳng database.
+The JSON result has the counts connected, joined, answered, accepted, rejected, timeout, duplicateAccepted/Rejected/Unexpected, retries, transport errors, the distribution of ACK codes and the p50/p95/max latency. accepted/rejected count ACKs (duplicates included); joined/answered count devices. The exit code is non-zero when joins/answers are missing, on a timeout, an error ACK or a duplicate with the wrong result. When no question is opened within `--timeout` (default 90 seconds) the run ends with a timeout. There is no branch that writes straight to the database.

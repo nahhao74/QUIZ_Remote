@@ -17,8 +17,8 @@ constexpr uint8_t DIGIT_ON = DIGIT_DIRECT_GPIO ? HIGH : LOW;
 constexpr uint8_t DIGIT_OFF = DIGIT_DIRECT_GPIO ? LOW : HIGH;
 constexpr uint8_t ROWS[4] = {25, 26, 27, 22};
 constexpr uint8_t COLS[4] = {32, 33, 34, 35};
-// Bo 0322ccc dang chap WAKE_NODE voi COL3: nhan phim cot 1-3 thi COL3 cung len theo qua DWAKE0-2.
-// true: bo qua COL3 khi cung hang co phim khac (A-D van dung khi nhan rieng). Het chap thi dat false.
+// Board 0322ccc has WAKE_NODE shorted to COL3: pressing a key in columns 1-3 also raises COL3 through DWAKE0-2.
+// true: ignore COL3 when another key in the same row is pressed (A-D still work when pressed alone). Set false once the short is fixed.
 constexpr bool COL3_FOLLOWS_WAKE = true;
 constexpr char KEYS[4][4] = {
   {'1','2','3','A'}, {'4','5','6','B'},
@@ -94,7 +94,7 @@ void requestShutdown() {
   if (shutdownPending || powerReleased) return;
   shutdownPending = true;
   shutdownSince = millis();
-  Serial.println("[POWER] Tat sau 5 giay; nha phim. Test nguon pin phai rut USB.");
+  Serial.println("[POWER] Powering off in 5 seconds; release the key. A battery-power test needs the USB cable unplugged.");
 }
 
 void serviceKeys(uint32_t now) {
@@ -107,7 +107,7 @@ void serviceKeys(uint32_t now) {
     starDown = stableKey == '*';
     if (starDown) starSince = now;
     if (stableKey == char(0x7f)) {
-      Serial.println("[KEY] Nhieu phim/tin hieu khong hop le; thu mot phim moi lan.");
+      Serial.println("[KEY] Several keys or an invalid signal; try one key at a time.");
     } else if (stableKey) {
       uint8_t number = 0;
       if (stableKey >= '0' && stableKey <= '9') number = stableKey - '0';
@@ -122,13 +122,13 @@ void serviceKeys(uint32_t now) {
 
 void startWifi() {
   if (!WIFI_SSID[0]) {
-    Serial.println("[WIFI] Dien WIFI_SSID/WIFI_PASSWORD trong sketch truoc.");
+    Serial.println("[WIFI] Fill in WIFI_SSID/WIFI_PASSWORD in the sketch first.");
     return;
   }
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false); // Diagnostic mode, not optimized for battery life.
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.println("[WIFI] Dang ket noi; quan sat reset va do nguon duoi tai.");
+  Serial.println("[WIFI] Connecting; watch for resets and measure the supply under load.");
 }
 
 void serviceShutdown(uint32_t now) {
@@ -138,7 +138,7 @@ void serviceShutdown(uint32_t now) {
     blankOutputs();
     WiFi.mode(WIFI_OFF);
     allRows(LOW); // All raw rows HIGH: detect any held wake key.
-    Serial.println("[POWER] Cho nha het phim, sau do ha GPIO13.");
+    Serial.println("[POWER] Waiting for all keys to be released, then driving GPIO13 low.");
     return; // Allow columns to settle before checking release.
   }
   if (!releasing) return;
@@ -149,16 +149,16 @@ void serviceShutdown(uint32_t now) {
   if (!released) { releaseTimerRunning = false; return; }
   if (!releaseTimerRunning) { releasedSince = now; releaseTimerRunning = true; }
   if (uint32_t(now-releasedSince) < 500) return;
-  Serial.println("[POWER] GPIO13 LOW. USB con cam thi ESP32 van duoc cap nguon.");
+  Serial.println("[POWER] GPIO13 LOW. If USB is still plugged in the ESP32 stays powered.");
   Serial.flush();
   digitalWrite(HOLD, LOW);
   powerReleased = true; // Never reassert HOLD until an actual reboot.
 }
 
 void menu() {
-  Serial.println("PCB M2/M5/M6: 1=8 trai; 2=8 phai; 3=88; 4=12; 0=blank");
-  Serial.println("s=lan luot segment A..G,DP ca hai digit; k=keypad on/off");
-  Serial.println("w=WiFi; x=tat nguon sau 5s; *=giu 3s de yeu cau tat; m=menu");
+  Serial.println("PCB M2/M5/M6: 1=8 left; 2=8 right; 3=88; 4=12; 0=blank");
+  Serial.println("s=step through segments A..G,DP on both digits; k=keypad on/off");
+  Serial.println("w=WiFi; x=power off after 5s; *=hold 3s to request power off; m=menu");
 }
 
 void command(char ch) {

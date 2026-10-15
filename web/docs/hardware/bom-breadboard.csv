@@ -1,15 +1,15 @@
-Ref,So luong,Linh kien,Gia tri / loai,Ghi chu
-U1,1,ESP32 DevKit 30 pin,ESP32-WROOM-32,Da co
-DISP1-DISP2,2,Module LED 7 doan 4 so,74HC595 5 chan,Da co; VCC 3V3 khi thu
-K1,1,Keypad membrane 4x4,8 day,Da co
-LED1,1,LED do,SMD 0805,Bo sung khi lam mach day du
-LED2,1,LED xanh,SMD 0805 hoac xuyen lo,Da co
-R1-R4,4,Dien tro bao ve hang keypad,1 kOhm 1/4 W,Cho mach day du
-R5-R8,4,Dien tro keo xuong cot keypad,47 kOhm 1/4 W,Cho mach day du
-R9-R10,2,Dien tro han dong LED,1 kOhm 1/4 W; tam dung 330 Ohm cho LED xanh,Moi LED mot con
-C1,1,Tu hoa dau nguon,470 uF 10 V,Khuyen nghi gan hai display
-C2-C3,2,Tu gom decoupling,100 nF 50 V,Dat gan VCC moi display neu module chua co
-BUF1,1,Bo dem muc logic tuy chon,74AHCT125,Chi can neu cap display bang 5 V
-PS1,1,Nguon USB,5 V toi thieu 1 A,Cap ESP32; lay 3V3 tu board khi thu
-J1,1,Header keypad,1x8 2.54 mm,Cho breadboard/PCB
-J2-J3,2,Header display,1x5 2.54 mm,Theo dung thu tu in tren module
+Ref,Quantity,Component,Value / type,Notes
+U1,1,ESP32 DevKit 30 pin,ESP32-WROOM-32,Already owned
+DISP1-DISP2,2,4-digit 7-segment LED module,74HC595 5-pin,Already owned; VCC 3V3 for testing
+K1,1,4x4 membrane keypad,8 wires,Already owned
+LED1,1,Red LED,SMD 0805,Add when building the full circuit
+LED2,1,Green LED,SMD 0805 or through-hole,Already owned
+R1-R4,4,Keypad row protection resistor,1 kOhm 1/4 W,For the full circuit
+R5-R8,4,Keypad column pull-down resistor,47 kOhm 1/4 W,For the full circuit
+R9-R10,2,LED series resistor,1 kOhm 1/4 W; temporarily 330 Ohm for the green LED,One per LED
+C1,1,Power input bulk capacitor,470 uF 10 V,Recommended near the two displays
+C2-C3,2,Decoupling capacitor,100 nF 50 V,Place near the VCC of each display if the module does not have one
+BUF1,1,Optional logic level buffer,74AHCT125,Only needed if the displays are powered from 5 V
+PS1,1,USB power supply,5 V at least 1 A,Powers the ESP32; take 3V3 from the board when testing
+J1,1,Keypad header,1x8 2.54 mm,For breadboard/PCB
+J2-J3,2,Display header,1x5 2.54 mm,In the order printed on the module

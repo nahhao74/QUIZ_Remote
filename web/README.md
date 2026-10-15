@@ -1,19 +1,19 @@
-# ClassPulse — lớp học tương tác với thiết bị ESP32
+# ClassPulse — an interactive classroom with ESP32 devices
 
-MVP monorepo: giáo viên tạo quiz, mở phòng và trình chiếu; sinh viên dùng keypad 4×4 giả lập để join và xác nhận A/B/C/D qua MQTT. NestJS xác thực dữ liệu, lưu PostgreSQL, trả ACK và cập nhật web qua Socket.IO. Giao diện tiếng Việt; không cần tài khoản sinh viên.
+MVP monorepo: a teacher creates a quiz, opens a room and presents it; students use a simulated 4×4 keypad to join and confirm A/B/C/D over MQTT. NestJS validates the data, stores it in PostgreSQL, sends the ACK and updates the web through Socket.IO. The interface is in Vietnamese; no student accounts are needed. Button and menu names below are shown as they appear in the interface, followed by an English gloss in parentheses.
 
-Ngoài luồng cơ bản, hệ thống có:
+Besides the basic flow, the system provides:
 
-- **Câu một hoặc nhiều đáp án** — câu nhiều đáp án chấm đúng khi chọn đủ và đúng; keypad bấm A–D để bật/tắt từng phương án.
-- **Nhập câu hỏi từ Word, Excel, PDF, TXT/CSV** — nhận dạng đáp án qua dòng "Đáp án", bảng đáp án cuối đề, phương án gạch chân/tô màu trong Word; có file mẫu và nhận dạng bằng AI cho tài liệu khó/PDF scan.
-- **Trợ lý AI tạo câu hỏi** (Gemini miễn phí, Ollama chạy cục bộ không giới hạn, hoặc Claude) — tải giáo trình, chọn chương, số câu và tỷ lệ dễ/trung bình/khó; AI đề xuất câu hỏi kèm lời giải và kiến thức kiểm tra, **chờ giáo viên duyệt** mới vào bộ đề.
-- **Ngân hàng câu hỏi** — tìm kiếm không dấu trên mọi bộ câu hỏi và phát hiện câu trùng/gần giống.
-- **Đánh giá chất lượng đề** — kiểm tra tự động và bằng AI: câu mơ hồ, thiếu dữ kiện, nhiều đáp án có thể đúng, câu trùng nội dung, phương án nhiễu; phân tích kết quả làm bài (độ khó, độ phân biệt, hiệu quả phương án nhiễu, KR-20).
-- **Quản lý kỳ thi** — trộn đề và xáo trộn đáp án thành nhiều mã đề, in đề Word, đáp án Excel, mở phiên thi theo lớp, thống kê điểm theo lớp và nhận xét AI.
+- **Single- or multiple-answer questions** — a multiple-answer question is correct only when all the right options, and nothing else, are chosen; on the keypad A–D toggle each option.
+- **Importing questions from Word, Excel, PDF, TXT/CSV** — answers are recognised from an "Đáp án" (answer) line, an answer table at the end of the paper, and underlined or coloured options in Word; sample files and AI recognition are available for difficult documents and scanned PDFs.
+- **AI assistant for question writing** (free Gemini, unlimited local Ollama, or Claude) — upload course material, choose chapters, the number of questions and the easy/medium/hard ratio; the AI proposes questions with explanations and the knowledge being tested, and **waits for teacher approval** before anything enters a question set.
+- **Question bank** — accent-insensitive search across every question set and detection of duplicate or near-duplicate questions.
+- **Quality review** — automatic and AI checks: ambiguous questions, missing data, several possibly correct answers, duplicated content, weak distractors; plus analysis of results (difficulty, discrimination, distractor effectiveness, KR-20).
+- **Exam management** — shuffle questions and options into several paper codes, print Word papers, Excel answer keys, open exam sessions per class, per-class score statistics and AI commentary.
 
-## Chạy từ máy mới
+## Running on a new machine
 
-Yêu cầu: Docker Engine/Desktop có **Compose v2**, RAM đề nghị 4 GB. Node.js **22 LTS** và **pnpm 10.17.1** chỉ cần cho phát triển hoặc chạy lệnh bên ngoài container. Có thể cài pnpm bằng `corepack enable && corepack prepare pnpm@10.17.1 --activate` sau khi cài Node.
+Requirements: Docker Engine/Desktop with **Compose v2**, 4 GB RAM recommended. Node.js **22 LTS** and **pnpm 10.17.1** are only needed for development or for running commands outside the containers. After installing Node, pnpm can be installed with `corepack enable && corepack prepare pnpm@10.17.1 --activate`.
 
 ```bash
 cp .env.example .env
@@ -21,63 +21,63 @@ docker compose up --build -d
 docker compose exec backend pnpm db:seed
 ```
 
-Nếu Docker CLI trên máy đang dùng Podman rootless, cài proxy localhost một lần để dùng URL không có số cổng:
+If the Docker CLI on your machine is really rootless Podman, install the localhost proxy once so you can use a URL without a port number:
 
 ```bash
 sudo ./scripts/install-localhost-proxy.sh
 ```
 
-Script tự dùng Apache nếu Apache đang giữ cổng 80; nếu cổng còn trống, script cài socket proxy chỉ lắng nghe loopback. Cả hai cách đều chuyển `http://localhost` sang frontend rootless tại `127.0.0.1:8080`. Docker Engine chạy rootful có thể thay mapping frontend thành `80:80` và không cần proxy này.
+The script uses Apache if Apache already holds port 80; if the port is free it installs a socket proxy that only listens on loopback. Either way `http://localhost` is forwarded to the rootless frontend at `127.0.0.1:8080`. A rootful Docker Engine can change the frontend mapping to `80:80` and does not need this proxy.
 
-Backend tự chạy `prisma migrate deploy` trước khi khởi động. Seed là lệnh riêng, có thể chạy lại mà không ghi đè tài khoản demo hoặc reset tiến độ phòng đang tồn tại. Chờ tất cả dịch vụ healthy bằng `docker compose ps`.
+The backend runs `prisma migrate deploy` by itself before starting. Seeding is a separate command that can be re-run without overwriting the demo account or resetting the progress of an existing room. Wait until every service is healthy with `docker compose ps`.
 
-| Địa chỉ | Công dụng |
+| Address | Purpose |
 |---|---|
-| http://localhost | Web giáo viên |
-| http://localhost/device-simulator | ESP32 giả lập trong trình duyệt |
+| http://localhost | Teacher web app |
+| http://localhost/device-simulator | ESP32 simulator in the browser |
 | http://localhost:3000/api/docs | Swagger UI |
 | http://localhost:3000/api/docs-json | OpenAPI JSON |
-| http://localhost:3000/api/health | Health API / PostgreSQL / MQTT |
-| http://localhost:18083 | Dashboard EMQX |
+| http://localhost:3000/api/health | Health of the API / PostgreSQL / MQTT |
+| http://localhost:18083 | EMQX Dashboard |
 
-Tài khoản **phát triển** trong seed: `demo@classpulse.local` / `Demo@12345`. EMQX Dashboard: `admin` / `Admin-dev-only-123`. Có thể tự đăng ký giáo viên khác trong web. Mỗi giáo viên chỉ đọc, sửa và điều khiển dữ liệu của mình.
+**Development** account created by the seed: `demo@classpulse.local` / `Demo@12345`. EMQX Dashboard: `admin` / `Admin-dev-only-123`. Other teachers can register themselves in the web app. Each teacher can only read, edit and control their own data.
 
-### Bật/tắt hằng ngày trên máy dùng Podman
+### Daily start/stop on a machine that uses Podman
 
-Máy cài sẵn Compose tại `.runtime/docker-compose` và Apache chuyển `http://localhost` sang frontend. Chạy trong thư mục dự án:
+The machine has Compose installed at `.runtime/docker-compose`, and Apache forwards `http://localhost` to the frontend. Run these in the project folder:
 
 ```bash
 cd /var/www/html
 export DOCKER_HOST=unix:///run/user/$(id -u)/podman/podman.sock
-./.runtime/docker-compose --profile ollama up -d     # bật (bỏ --profile ollama nếu không dùng AI cục bộ)
-./.runtime/docker-compose ps                         # đợi khoảng 1 phút, mọi dịch vụ phải "healthy"
-./.runtime/docker-compose --profile ollama stop      # tắt, dữ liệu vẫn giữ nguyên
+./.runtime/docker-compose --profile ollama up -d     # start (drop --profile ollama if you do not use local AI)
+./.runtime/docker-compose ps                         # wait about 1 minute; every service must be "healthy"
+./.runtime/docker-compose --profile ollama stop      # stop; the data is kept
 ```
 
-Sau khi bật, mở http://localhost. Sau khi sửa mã nguồn, thêm `--build` vào lệnh bật để build lại image.
+After starting, open http://localhost. After editing the source code, add `--build` to the start command to rebuild the images.
 
-**http://localhost báo 503 (Service Unavailable):**
+**http://localhost shows 503 (Service Unavailable):**
 
-- Vừa bật: đợi backend khởi động xong.
-- IP Wi-Fi của máy đổi (đổi mạng, khởi động lại router): EMQX chỉ mở cổng MQTT 1883 trên địa chỉ ghi ở `MQTT_TCP_BIND_ADDRESS` trong `.env`. Nếu địa chỉ đó không còn, EMQX không chạy, kéo theo backend và frontend cũng không chạy. Xem IP mới bằng `ip -4 addr show` (ví dụ card Wi-Fi `wlp3s0`), sửa `MQTT_TCP_BIND_ADDRESS=<IP mới>` trong `.env`, chạy lại lệnh bật và cấu hình lại thiết bị ESP32 tới IP mới. Nên đặt IP cố định cho máy trong router.
-- Xem lỗi cụ thể: `./.runtime/docker-compose logs --tail 50 backend emqx`.
+- Just started: wait for the backend to finish starting.
+- The machine's Wi-Fi IP changed (different network, router restart): EMQX only opens MQTT port 1883 on the address in `MQTT_TCP_BIND_ADDRESS` in `.env`. If that address no longer exists EMQX does not start, and the backend and frontend do not start either. Look up the new IP with `ip -4 addr show` (for example the Wi-Fi card `wlp3s0`), set `MQTT_TCP_BIND_ADDRESS=<new IP>` in `.env`, run the start command again and reconfigure the ESP32 devices with the new IP. It is best to give the machine a fixed IP in the router.
+- To see the actual error: `./.runtime/docker-compose logs --tail 50 backend emqx`.
 
-### Thử một tiết học
+### Trying out a lesson
 
-1. Đăng nhập web giáo viên. Chọn quiz **Khám phá thế giới công nghệ**, xem trước hoặc sửa nội dung. Khi tạo/sửa quiz, dùng **Nhập từ file** để nạp nhanh câu hỏi từ Word, Excel, PDF hoặc TXT; nút **File mẫu** cho biết đúng định dạng.
-2. Chọn **Mở phiên học**, đặt chế độ điều khiển và thời gian. Phòng demo `123456` cũng có sẵn trong lịch sử sau seed.
-3. Vào lobby, mở **Trình chiếu** ở một tab riêng; có thể bật fullscreen. Tab này dùng cùng phiên đăng nhập giáo viên.
-4. Mở `/device-simulator`. Mỗi tab tạo deviceId riêng; mở thêm tab để mô phỏng nhiều sinh viên.
-5. Dùng keypad nhập mã phòng 6 số → **Confirm** → mã sinh viên (ví dụ `20260001`) → **Confirm**. Chờ ACK `JOIN_ACCEPTED`. Mã dài cuộn từng cặp trên đúng hai LED 7 đoạn.
-6. Giáo viên chọn **Bắt đầu**. Simulator nhận câu hiện tại từ retained MQTT room state.
-7. Bấm A/B/C/D rồi **Confirm** để gửi. **Xóa** hủy lựa chọn chưa gửi. Có thể chọn lại và Confirm trước deadline; chỉ lần hợp lệ có sequence mới nhất được tính.
-8. Quan sát số đã trả lời, số còn lại và biểu đồ. Đáp án đúng và lựa chọn của từng sinh viên chỉ hiện khi đóng câu.
-9. Dùng **Đóng nhận trả lời**, **Câu tiếp theo**, **Kết thúc**. Chế độ TIMER tự đóng theo deadline server, chờ 3 giây hiển thị kết quả, rồi mở câu kế tiếp.
-10. Xem báo cáo cuối phiên và lịch sử. Trong khung **Sinh viên tham gia**, chọn **Xuất CSV** để tải kết quả từng sinh viên và từng câu hỏi. Reload trang giữ nguyên câu, deadline và kết quả từ server.
+1. Log in to the teacher web app. Choose the quiz **Khám phá thế giới công nghệ** (Exploring the world of technology) and preview or edit it. When creating or editing a quiz, use **Nhập từ file** (Import from file) to load questions quickly from Word, Excel, PDF or TXT; the **File mẫu** (Sample file) button shows the exact format.
+2. Choose **Mở phiên học** (Start session), then set the control mode and the time. The demo room `123456` is also available in the history after seeding.
+3. In the lobby, open **Trình chiếu** (Presentation) in a separate tab; it can go fullscreen. That tab shares the teacher's login session.
+4. Open `/device-simulator`. Each tab creates its own deviceId; open more tabs to simulate several students.
+5. On the keypad enter the 6-digit room code → **Confirm** → the student code (for example `20260001`) → **Confirm**. Wait for the `JOIN_ACCEPTED` ACK. Long codes scroll in pairs across the two 7-segment LEDs.
+6. The teacher chooses **Bắt đầu** (Start). The simulator receives the current question from the retained MQTT room state.
+7. Press A/B/C/D and then **Confirm** to send. **Xóa** (Clear) cancels a choice that has not been sent. A student can choose again and Confirm before the deadline; only the valid submission with the newest sequence counts.
+8. Watch the answered count, the remaining count and the chart. The correct answer and each student's choice are only shown after the question is closed.
+9. Use **Đóng nhận trả lời** (Close answers), **Câu tiếp theo** (Next question) and **Kết thúc** (End). TIMER mode closes the question by itself at the server deadline, waits 3 seconds to show the result, then opens the next question.
+10. Look at the end-of-session report and the history. In the **Sinh viên tham gia** (Participating students) panel choose **Xuất CSV** (Export CSV) to download each student's results per question. Reloading the page keeps the question, the deadline and the results from the server.
 
-### Nhập câu hỏi từ Word, Excel, PDF, TXT
+### Importing questions from Word, Excel, PDF, TXT
 
-Trong trang tạo/sửa bộ câu hỏi, chọn **Nhập từ file** (`.docx`, `.xlsx`, `.csv`, `.pdf`, `.txt`, tối đa 20 MB, 200 câu). Câu nhập vào hiện trong editor kèm danh sách lưu ý; câu thiếu phương án hoặc chưa có đáp án được đánh dấu đỏ và phải sửa trước khi lưu. Nút **File mẫu** tải mẫu Excel, Word hoặc TXT.
+In the page for creating or editing a question set choose **Nhập từ file** (`.docx`, `.xlsx`, `.csv`, `.pdf`, `.txt`, at most 20 MB and 200 questions). Imported questions appear in the editor together with a list of notes; a question with missing options or no answer is marked red and must be fixed before saving. The **File mẫu** button downloads an Excel, Word or TXT template. The importer reads Vietnamese keywords, so the sample below is in Vietnamese (`Tiêu đề` = title, `Mô tả` = description, `Chương` = chapter, `Câu` = question, `Đáp án` = answer, `Giải thích` = explanation, `Độ khó` = difficulty, `Dễ` = easy, `Thời gian` = time limit in seconds, `BẢNG ĐÁP ÁN` = answer table).
 
 ```text
 Tiêu đề: Kiểm tra nhanh IoT
@@ -103,92 +103,92 @@ BẢNG ĐÁP ÁN
 1A 2AB
 ```
 
-- Câu bắt đầu bằng `Câu N:`, `Question N`, `QN:` hoặc `N.`; phương án `A.`, `A)`, `(A)` trên từng dòng hoặc chung một dòng; câu dẫn có thể nhiều dòng, kể cả các ý a), b), c).
-- Đáp án: dòng `Đáp án: B` / `Đáp án: A, C`, dấu `*` trước phương án, bảng đáp án cuối tài liệu (`1-A, 2-C`, `1A 2C` hoặc bảng hai dòng `Câu | 1 | 2` – `Đáp án | A | C`), mục "Hướng dẫn giải" (`Câu 2: Chọn C vì …`). Trong Word, phương án được gạch chân, tô màu chữ, tô nền hoặc in đậm cũng được nhận là đáp án (có cảnh báo để kiểm tra lại).
-- Dòng tùy chọn: `Giải thích:`/`Lời giải:`, `Kiến thức:`, `Chủ đề:`, `Độ khó:` (Dễ/Trung bình/Khó, Nhận biết/Thông hiểu/Vận dụng hoặc nhãn `[NB]`, `[TH]`, `[VD]`), `Loại: nhiều đáp án`, `Thời gian:`. Tiêu đề `Chương …`/`Phần …` hoặc Heading trong Word gán chủ đề cho các câu sau.
-- Excel/CSV: mỗi dòng một câu, các cột STT, Câu hỏi, A, B, C, D, Đáp án (chữ hoặc số 1–4, nhiều đáp án như `A, C`), Loại, Thời gian (giây), Độ khó, Chủ đề, Kiến thức kiểm tra, Lời giải.
-- PDF cần có lớp chữ. PDF scan, file trình bày phức tạp: dùng **Nhận dạng bằng AI** (cần ANTHROPIC_API_KEY). File `.doc`/`.xls` đời cũ cần lưu lại dạng `.docx`/`.xlsx`.
+- A question starts with `Câu N:`, `Question N`, `QN:` or `N.`; options are `A.`, `A)` or `(A)`, either one per line or all on one line; the question stem may span several lines, including a), b), c) sub-items.
+- Answers: a line `Đáp án: B` / `Đáp án: A, C`, a `*` before an option, an answer table at the end of the document (`1-A, 2-C`, `1A 2C`, or a two-row table `Câu | 1 | 2` – `Đáp án | A | C`), or a "Hướng dẫn giải" (solution guide) section (`Câu 2: Chọn C vì …`). In Word, an underlined, coloured, highlighted or bold option is also recognised as the answer (with a warning so you can double-check).
+- Optional lines: `Giải thích:`/`Lời giải:` (explanation), `Kiến thức:` (knowledge tested), `Chủ đề:` (topic), `Độ khó:` (difficulty: Dễ/Trung bình/Khó, i.e. easy/medium/hard, or Nhận biết/Thông hiểu/Vận dụng, or the labels `[NB]`, `[TH]`, `[VD]`), `Loại: nhiều đáp án` (type: multiple answers), `Thời gian:` (time limit). A heading `Chương …`/`Phần …` (chapter/part) or a Word Heading assigns a topic to the following questions.
+- Excel/CSV: one question per row, with the columns STT (number), Câu hỏi (question), A, B, C, D, Đáp án (a letter or a number 1–4, several answers such as `A, C`), Loại (type), Thời gian (seconds), Độ khó (difficulty), Chủ đề (topic), Kiến thức kiểm tra (knowledge tested), Lời giải (solution).
+- A PDF needs a text layer. For scanned PDFs or complex layouts use **Nhận dạng bằng AI** (Recognise with AI; needs ANTHROPIC_API_KEY). Old `.doc`/`.xls` files must be re-saved as `.docx`/`.xlsx`.
 
-### Câu hỏi nhiều đáp án
+### Multiple-answer questions
 
-Mỗi câu chọn loại **Một đáp án** (nút tròn) hoặc **Nhiều đáp án** (ô đánh dấu). Màn chiếu và simulator ghi rõ "chọn tất cả phương án đúng". Trên keypad, câu nhiều đáp án dùng A–D để bật/tắt từng chữ, LED hiện các chữ đã chọn (ví dụ `AC`), Confirm để gửi, Xóa để bỏ hết. Sinh viên chỉ được tính đúng khi chọn đủ và đúng mọi đáp án; biểu đồ đếm số sinh viên chọn từng phương án nên tổng có thể vượt 100%. Thiết bị/firmware cũ chỉ gửi một chữ vẫn dùng được với câu một đáp án.
+Each question is either **Một đáp án** (single answer, radio buttons) or **Nhiều đáp án** (multiple answers, checkboxes). The presentation screen and the simulator state "select every correct option". On the keypad a multiple-answer question uses A–D to toggle each letter, the LEDs show the chosen letters (for example `AC`), Confirm sends and Clear removes everything. A student is only counted correct when every right option, and no other, is chosen; the chart counts the students who picked each option, so the total can exceed 100 %. Older devices/firmware that only send one letter still work with single-answer questions.
 
-### Trợ lý AI
+### AI assistant
 
-AI dùng được một trong ba nguồn, cấu hình trong `.env` rồi khởi động lại backend (`docker compose up -d backend`). Không cấu hình gì thì mọi chức năng khác vẫn chạy; các nút AI bị tắt kèm hướng dẫn.
+The AI can use one of three sources, configured in `.env` and then applied by restarting the backend (`docker compose up -d backend`). With nothing configured every other feature still works and the AI buttons are disabled with an explanation.
 
-| Nguồn | Chi phí, giới hạn | Cấu hình |
+| Source | Cost, limits | Configuration |
 |---|---|---|
-| **Google Gemini** (mặc định nếu có khóa) | Miễn phí với hạn mức số yêu cầu/token mỗi phút và mỗi ngày (xem trong AI Studio, đặt lại lúc 0h giờ Thái Bình Dương). Nội dung gửi qua gói miễn phí có thể được Google dùng để cải thiện sản phẩm. | `GEMINI_API_KEY=...` (tạo miễn phí tại aistudio.google.com/apikey), tùy chọn `GEMINI_MODEL` (mặc định `gemini-3.8-flash`) |
-| **Ollama** (mô hình chạy trên máy chủ) | Miễn phí, **không giới hạn**, dữ liệu không rời máy chủ. Chất lượng và tốc độ phụ thuộc mô hình và phần cứng; cần GPU để nhanh. Không đọc được PDF dạng ảnh. | `docker compose --profile ollama up -d`, `docker compose exec ollama ollama pull qwen3:4b-instruct`, rồi `OLLAMA_URL=http://ollama:11434` |
-| **Anthropic Claude** | Trả phí theo token | `ANTHROPIC_API_KEY=...`, tùy chọn `ANTHROPIC_MODEL` |
+| **Google Gemini** (default when a key exists) | Free with per-minute and per-day request/token quotas (see AI Studio; reset at midnight Pacific time). Content sent through the free tier may be used by Google to improve its products. | `GEMINI_API_KEY=...` (create one free at aistudio.google.com/apikey), optionally `GEMINI_MODEL` (default `gemini-3.8-flash`) |
+| **Ollama** (a model running on the server) | Free and **unlimited**; data never leaves the server. Quality and speed depend on the model and hardware; a GPU is needed to be fast. Cannot read image-only PDFs. | `docker compose --profile ollama up -d`, `docker compose exec ollama ollama pull qwen3:4b-instruct`, then `OLLAMA_URL=http://ollama:11434` |
+| **Anthropic Claude** | Paid per token | `ANTHROPIC_API_KEY=...`, optionally `ANTHROPIC_MODEL` |
 
-**Miễn phí mà không bị chặn vì hết hạn mức:** đặt cả `GEMINI_API_KEY` và `OLLAMA_URL`. Gemini trả lời trước (nhanh, chất lượng tốt); gặp hạn mức theo phút thì tự thử lại sau vài giây đến một phút; nếu vẫn hết hạn mức, quá tải hoặc mất mạng, lời gọi đó chuyển sang Ollama và Gemini được thử lại sau 10 phút. Mỗi tác vụ AI ghi mô hình đã thực sự trả lời (ví dụ `gemini-3.8-flash + qwen3:4b-instruct`). Chỉ có Gemini thì khi hết hạn mức ngày, tác vụ báo lỗi rõ ràng để thử lại sau.
+**Free without being blocked by quotas:** set both `GEMINI_API_KEY` and `OLLAMA_URL`. Gemini answers first (fast, good quality); when it hits a per-minute quota the request is retried after a few seconds to a minute; if it is still over quota, overloaded or offline, that call falls back to Ollama and Gemini is tried again after 10 minutes. Each AI task records the model that actually answered (for example `gemini-3.8-flash + qwen3:4b-instruct`). With Gemini alone, once the daily quota is gone the task fails with a clear error so you can retry later.
 
-Đặt `AI_PROVIDER=gemini|ollama|anthropic` để chọn nguồn chính khi cấu hình nhiều nguồn. Về Ollama (đo ngày 12/10/2026 trên laptop 16 luồng CPU, 14 GB RAM, không dùng GPU, `qwen3:4b-instruct`):
+Set `AI_PROVIDER=gemini|ollama|anthropic` to choose the primary source when several are configured. About Ollama (measured on 12 Oct 2026 on a laptop with 16 CPU threads, 14 GB RAM, no GPU, `qwen3:4b-instruct`):
 
-- **RAM:** với `OLLAMA_NUM_CTX=32768` (mặc định) mô hình chiếm khoảng 5,3 GB nhờ bộ nhớ ngữ cảnh 8-bit mà service `ollama` trong compose đã bật (7,6 GB nếu không bật). Máy ít RAM hơn: đặt `OLLAMA_NUM_CTX=16384`; mỗi lần sẽ đọc được tài liệu ngắn hơn, chương quá dài được báo để chọn ít chương lại.
-- **Tốc độ trên CPU** (khoảng 6–7 token/giây): tạo 6 câu từ hai chương ngắn mất khoảng 6 phút, nhận dạng đề 3 câu 1,5 phút, phân tích kết quả một buổi học 4,5 phút, đánh giá đề 6 câu khoảng 7 phút. Tác vụ chạy nền, giao diện hiện thời gian đã chạy. GPU NVIDIA (cần NVIDIA Container Toolkit và cấu hình GPU cho service) nhanh hơn nhiều lần.
-- **Chất lượng:** câu hỏi đúng kiến thức, tiếng Việt tự nhiên, nhận dạng đề chính xác; phương án nhiễu và nhận xét kém sâu hơn Gemini — giáo viên vẫn duyệt từng câu trước khi đưa vào đề. Riêng **đánh giá chất lượng đề**, mô hình 4B bỏ sót lỗi kiến thức và có lúc kết luận sai (thử nghiệm: cho rằng QoS 2 có 3 bước), nên dùng Gemini cho chức năng này. `qwen3:8b` hoặc `gemma4:e4b` tốt hơn nhưng cần nhiều RAM và chậm hơn.
-- Không đọc được PDF dạng ảnh (scan); tài liệu dài được chia nhỏ theo `OLLAMA_NUM_CTX`.
+- **RAM:** with `OLLAMA_NUM_CTX=32768` (the default) the model takes about 5.3 GB thanks to the 8-bit context cache that the `ollama` service in the compose file enables (7.6 GB without it). On a machine with less RAM set `OLLAMA_NUM_CTX=16384`; each run then reads shorter documents, and a chapter that is too long is reported so you can choose fewer chapters.
+- **Speed on CPU** (about 6–7 tokens/second): generating 6 questions from two short chapters takes about 6 minutes, recognising a 3-question paper 1.5 minutes, analysing the results of one lesson 4.5 minutes and reviewing a 6-question paper about 7 minutes. Tasks run in the background and the interface shows the elapsed time. An NVIDIA GPU (needs the NVIDIA Container Toolkit and GPU settings for the service) is many times faster.
+- **Quality:** the questions are factually correct, the Vietnamese is natural and paper recognition is accurate; the distractors and commentary are less deep than Gemini's — the teacher still reviews every question before it enters a paper. For the **quality review** specifically, the 4B model misses factual errors and sometimes reaches wrong conclusions (in testing it claimed QoS 2 has 3 steps), so use Gemini for that feature. `qwen3:8b` or `gemma4:e4b` are better but need more RAM and are slower.
+- It cannot read image-only (scanned) PDFs; long documents are split according to `OLLAMA_NUM_CTX`.
 
-Menu **Trợ lý AI**:
+The **Trợ lý AI** (AI assistant) menu:
 
-1. Tải giáo trình (PDF, Word, TXT, Markdown). Hệ thống tự tách chương theo "Chương/Bài/Phần" hoặc Heading; chọn các chương cần ra đề.
-2. Chọn số câu (1–60), tỷ lệ % câu dễ/trung bình/khó (tổng 100%), tỷ lệ câu nhiều đáp án, bộ câu hỏi dự kiến và yêu cầu thêm.
-3. AI viết câu hỏi theo lô; mỗi câu có lời giải, kiến thức được kiểm tra, chương và trích dẫn tài liệu làm căn cứ.
-4. Tab **Chờ duyệt**: sửa, loại hoặc duyệt từng câu/hàng loạt vào bộ câu hỏi có sẵn hoặc bộ mới. Câu nghi trùng với ngân hàng được cảnh báo. Không câu nào vào bộ đề nếu chưa được duyệt.
+1. Upload course material (PDF, Word, TXT, Markdown). The system splits it into chapters by "Chương/Bài/Phần" (chapter/lesson/part) or Heading; choose the chapters to write questions from.
+2. Choose the number of questions (1–60), the percentage of easy/medium/hard questions (total 100 %), the share of multiple-answer questions, the target question set and any extra instructions.
+3. The AI writes questions in batches; each question has an explanation, the knowledge tested, the chapter and a quotation from the material as evidence.
+4. In the **Chờ duyệt** (Pending review) tab: edit, reject or approve questions one by one or in bulk into an existing or a new question set. Questions that look like duplicates of the bank are flagged. Nothing enters a question set without approval.
 
-Dữ liệu gửi tới dịch vụ AI (trừ Ollama): nội dung các chương đã chọn, file nhờ AI nhận dạng, nội dung câu hỏi khi đánh giá đề, và số liệu tổng hợp khi phân tích kết quả (không kèm tên hay mã sinh viên). Số token của từng tác vụ được lưu trong AiJob.
+Data sent to the AI service (except Ollama): the content of the chosen chapters, files sent for AI recognition, question text when a paper is reviewed, and aggregated figures when results are analysed (never with student names or codes). The token counts of each task are stored in AiJob.
 
-### Ngân hàng câu hỏi, chất lượng đề và phân tích kết quả
+### Question bank, paper quality and result analysis
 
-- **Ngân hàng câu hỏi**: tìm kiếm không cần gõ dấu, lọc theo bộ, độ khó, loại câu, chủ đề, nguồn (soạn tay/nhập file/AI). Tab **Câu hỏi trùng lặp** so khớp câu dẫn và phương án (không phụ thuộc thứ tự phương án) với ngưỡng điều chỉnh được, xem hai câu cạnh nhau và xóa câu thừa.
-- **Đánh giá chất lượng** (nút trên trang bộ câu hỏi): kiểm tra tự động phương án trùng, "Tất cả các đáp án trên", đáp án dài bất thường, câu phủ định chưa in hoa, câu nhắc tới hình/bảng, câu trùng, phân bố vị trí đáp án; **Đánh giá bằng AI** chỉ ra câu mơ hồ, thiếu dữ kiện, nhiều đáp án có thể đúng, nghi sai đáp án, trùng nội dung, chấm từng phương án nhiễu và gợi ý viết lại.
-- **Phân tích kết quả**: báo cáo cuối buổi và trang chất lượng hiển thị tỷ lệ đúng, độ phân biệt (nhóm 27% điểm cao/thấp), tỷ lệ chọn từng phương án, cảnh báo phương án nhiễu không hiệu quả hoặc đáp án nghi sai, độ tin cậy KR-20, phổ điểm và điểm từng sinh viên; **Phân tích bằng AI** tóm tắt điểm mạnh, lỗ hổng kiến thức và đề xuất giảng dạy.
+- **Question bank**: search without typing accents, filter by set, difficulty, question type, topic and source (written by hand / imported / AI). The **Câu hỏi trùng lặp** (Duplicate questions) tab compares stems and options (independent of option order) with an adjustable threshold, shows two questions side by side and lets you delete the extra one.
+- **Quality review** (a button on the question set page): automatic checks for repeated options, "All of the above", unusually long answers, negative questions that are not capitalised, questions that refer to a figure or table, duplicate questions and the distribution of answer positions; **Đánh giá bằng AI** (Review with AI) points out ambiguous questions, missing data, several possibly correct answers, a suspected wrong answer and duplicate content, scores each distractor and suggests rewrites.
+- **Result analysis**: the end-of-session report and the quality page show the percentage correct, the discrimination index (top and bottom 27 % of scores), how often each option is chosen, warnings about ineffective distractors or a suspect answer key, KR-20 reliability, the score distribution and each student's score; **Phân tích bằng AI** (Analyse with AI) summarises strengths, knowledge gaps and teaching suggestions.
 
-### Kỳ thi, mã đề và thống kê theo lớp
+### Exams, paper codes and per-class statistics
 
-1. **Lớp học**: tạo lớp, nhập danh sách từ Excel (cột Họ và tên; STT dùng làm mã thiết bị 01–99). Sinh viên nhập mã này khi tham gia; báo cáo hiện họ tên.
-2. **Kỳ thi**: chọn bộ câu hỏi, số mã đề, bật **Trộn thứ tự câu hỏi** và/hoặc **Xáo trộn đáp án**. Mã đề 101, 102… có thể xem trước, tải đề Word để in và đáp án Excel.
-3. **Mở phiên thi** cho từng lớp; hệ thống tự gán mã đề ít dùng nhất (hoặc chọn mã cụ thể). Hộp thoại mở buổi học thường cũng có tùy chọn lớp và trộn câu/đáp án.
-4. Tab **Thống kê theo lớp**: điểm trung bình, trung vị, độ lệch chuẩn, tỷ lệ đạt, xếp loại Giỏi/Khá/Trung bình/Yếu/Kém, phổ điểm, tỷ lệ đúng từng câu theo lớp, xuất Excel và nhận xét AI so sánh các lớp. Trang lớp có bảng điểm qua các buổi.
+1. **Lớp học** (Classes): create a class and import the list from Excel (a "Họ và tên" full-name column; the STT number is used as the device code 01–99). Students enter this code when they join; reports show their full names.
+2. **Kỳ thi** (Exams): choose a question set and the number of paper codes, and turn on **Trộn thứ tự câu hỏi** (Shuffle question order) and/or **Xáo trộn đáp án** (Shuffle options). Paper codes 101, 102… can be previewed, and a Word paper to print and an Excel answer key can be downloaded.
+3. **Open an exam session** for each class; the system assigns the least-used paper code (or you choose a specific one). The dialog for opening a normal lesson also has class and question/option shuffle choices.
+4. The **Thống kê theo lớp** (Statistics by class) tab: mean, median, standard deviation, pass rate, grading as Giỏi/Khá/Trung bình/Yếu/Kém (excellent/good/average/weak/poor), score distribution, the percentage correct per question for each class, Excel export and AI commentary comparing the classes. The class page has a score table across sessions.
 
-Để debug MQTT: EMQX Dashboard → Connections / Subscriptions / Access Control. Không dùng tài khoản quản trị EMQX trong browser simulator. UI giáo viên chỉ dùng REST + Socket.IO.
+To debug MQTT: EMQX Dashboard → Connections / Subscriptions / Access Control. Do not use the EMQX admin account in the browser simulator. The teacher UI only uses REST + Socket.IO.
 
-## Các lệnh chính
+## Main commands
 
 ```bash
-# Toàn bộ hệ thống (sau khi copy .env)
+# The whole system (after copying .env)
 docker compose up --build -d
 
 # Migration / seed
 docker compose exec backend pnpm db:migrate
 docker compose exec backend pnpm db:seed
 
-# Unit + component tests trong môi trường container đã build
+# Unit + component tests in the built container environment
 docker compose exec backend pnpm test
 
-# PostgreSQL integration tests, tạo dữ liệu kiểm thử riêng và dọn dữ liệu đó
+# PostgreSQL integration tests; they create their own test data and clean it up
 docker compose exec backend pnpm test:integration
 
-# End-to-end HTTP + MQTT + Socket.IO, gồm 50 thiết bị
+# End-to-end HTTP + MQTT + Socket.IO, including 50 devices
 docker compose exec -e SIMULATOR_MQTT_URL=mqtt://emqx:1883 \
   -e MQTT_SIMULATOR_USERNAME=simulator -e MQTT_SIMULATOR_PASSWORD=simulator-dev-only \
   backend pnpm test:e2e
 
-# Từ máy host, sau pnpm install / pnpm build:
+# From the host, after pnpm install / pnpm build:
 pnpm simulate --devices=50 --room=123456 --duplicates
 
-# Hoặc chạy script trong container, thay room bằng mã phòng đang mở
+# Or run the script inside the container, replacing room with the code of the open room
 docker compose exec -e MQTT_URL=mqtt://emqx:1883 \
   -e MQTT_SIMULATOR_USERNAME=simulator -e MQTT_SIMULATOR_PASSWORD=simulator-dev-only \
   backend pnpm simulate --devices=50 --room=123456 --duplicates
 ```
 
-Thay các credential simulator trong lệnh nếu đã đổi `.env`. Script join, chờ giáo viên mở câu, gửi A–D với độ trễ ngẫu nhiên, rồi in accepted/rejected/timeout/duplicate và độ trễ ACK. `--delay=0` gửi dồn, `--timeout=90` giới hạn thời gian, `--duplicates` gửi lại nguyên request để thử idempotency. Trả exit code khác 0 nếu thiếu thiết bị trả lời, có lỗi/timeout hoặc xử lý duplicate sai. Các lần chạy dùng deviceId và studentCode riêng.
+Change the simulator credentials in the commands if you changed `.env`. The script joins, waits for the teacher to open a question, sends A–D with a random delay, then prints accepted/rejected/timeout/duplicate counts and the ACK latency. `--delay=0` sends everything at once, `--timeout=90` limits the time and `--duplicates` resends the exact same request to test idempotency. It returns a non-zero exit code if devices are missing a reply, there are errors/timeouts or duplicates are handled wrongly. Each run uses its own deviceId and studentCode.
 
-## Phát triển trên host
+## Development on the host
 
 ```bash
 cp .env.example .env
@@ -200,74 +200,74 @@ pnpm db:seed
 pnpm dev
 ```
 
-Vite chạy http://localhost:5173, proxy `/api` và `/socket.io` sang NestJS port 3000. Lệnh root tự đọc `.env`; biến môi trường đã đặt bên ngoài được giữ ưu tiên. Prisma CLI và backend dùng cùng `DATABASE_URL`. Simulator dùng **MQTT_SIMULATOR_USERNAME/PASSWORD**; không dùng `MQTT_USERNAME/PASSWORD` của backend. Thay VITE vars cần restart Vite hoặc rebuild image frontend.
+Vite runs at http://localhost:5173 and proxies `/api` and `/socket.io` to NestJS on port 3000. The root commands read `.env` by themselves; environment variables already set outside keep priority. The Prisma CLI and the backend use the same `DATABASE_URL`. The simulator uses **MQTT_SIMULATOR_USERNAME/PASSWORD**; do not use the backend's `MQTT_USERNAME/PASSWORD`. Changing VITE variables needs a Vite restart or a rebuild of the frontend image.
 
 ```bash
 pnpm test
-pnpm test:integration  # cần PostgreSQL đã migrate
-pnpm test:e2e          # cần API và EMQX đang chạy
+pnpm test:integration  # needs a migrated PostgreSQL
+pnpm test:e2e          # needs the API and EMQX running
 pnpm build
 ```
 
-## Cấu trúc
+## Structure
 
 ```text
 apps/
-  backend/                NestJS, Prisma schema/migration/seed, tests; nhập file, AI, ngân hàng câu hỏi, lớp học, kỳ thi
+  backend/                NestJS, Prisma schema/migration/seed, tests; file import, AI, question bank, classes, exams
   frontend/               React + Tailwind, teacher/presentation routes
-  device-simulator/       React component MQTT + keypad + 2 LED 7 đoạn
+  device-simulator/       React component: MQTT + keypad + two 7-segment LEDs
   firmware/               ESP-IDF: BLE provisioning, Wi-Fi/MQTT, keypad, 2×74HC595 display
 packages/
-  shared-types/           Types REST/realtime, khóa đáp án, thống kê, trình đọc câu hỏi, so khớp trùng lặp, phân tích câu hỏi, sinh mã đề
+  shared-types/           REST/realtime types, answer keys, statistics, question reader, duplicate matching, question analysis, paper code generation
   mqtt-contracts/         Zod validation, topics, payload/ACK v1
 scripts/
   simulate-devices/       Node MQTT load generator
-  tests/e2e.ts            Kiểm thử HTTP + broker + Socket.IO thật
-  provision-device.mjs    Cấp tài khoản MQTT riêng cho thiết bị
+  tests/e2e.ts            Real HTTP + broker + Socket.IO test
+  provision-device.mjs    Issues a dedicated MQTT account per device
 infra/                    Dockerfiles, Nginx, EMQX authentication/ACL
-docs/                     Kiến trúc, API, MQTT, kết quả kiểm thử
+docs/                     Architecture, API, MQTT, test results
 docker-compose.yml
 ```
 
-File `index.html` cũ không thuộc ứng dụng ClassPulse; bản sao giữ ở `docs/legacy-index.html`. Ứng dụng chạy từ Vite hoặc container frontend, không mở trực tiếp root HTML bằng file browser.
+The old `index.html` is not part of the ClassPulse application; a copy is kept at `docs/legacy-index.html`. The application runs from Vite or the frontend container; do not open the root HTML directly as a file in the browser.
 
-## Quy tắc dữ liệu
+## Data rules
 
-- Session giữ bản sao câu hỏi (`SessionQuestion`), tách khỏi quiz có thể chỉnh sửa. Quiz/câu hỏi dùng soft delete để giữ lịch sử.
-- Email unique; active roomCode có partial unique index PostgreSQL; device và studentCode chỉ có một participant trong từng session.
-- Một đáp án hiện hành trên `(participantId, questionId)`. Sequence tăng, server timestamp kiểm deadline. Client timestamp chỉ phục vụ chẩn đoán.
-- `ProcessedMqttMessage` lưu requestId unique, payload hash, ACK. Advisory lock theo request và row lock theo session bảo vệ gửi trùng và race với đóng câu. Answer và ACK record commit trong cùng transaction.
-- Duplicate cùng nội dung trả `DUPLICATE_MESSAGE` kèm `originalCode` và `success` gốc. Dùng lại requestId với nội dung khác bị từ chối.
-- Mẫu số phần trăm A–D, đúng/sai là số đã trả lời hợp lệ; không có câu trả lời thì tất cả bằng 0. Số chưa trả lời = số tham gia − số đã trả lời.
-- Deadline lưu trong database; bộ quét 250 ms khôi phục sau restart. Cả MANUAL và TIMER đều đóng câu khi hết thời gian; MANUAL đợi giáo viên chọn câu tiếp theo. Sau outage, câu hết hạn được đóng trước, rồi TIMER tiếp tục với thời gian đầy đủ cho câu mới.
-- Giáo viên có thể cho sinh viên join giữa phiên; tổng participant trong báo cáo dùng số participant hiện tại/cuối phiên.
+- A session keeps its own copy of the questions (`SessionQuestion`), separate from the quiz, which can still be edited. Quizzes and questions use soft delete to keep the history.
+- Email is unique; an active roomCode has a PostgreSQL partial unique index; a device and a studentCode can each have only one participant per session.
+- There is one current answer per `(participantId, questionId)`. The sequence increases and the server timestamp is checked against the deadline. The client timestamp is only for diagnostics.
+- `ProcessedMqttMessage` stores a unique requestId, the payload hash and the ACK. An advisory lock per request and a row lock per session protect against duplicate sends and races with closing a question. The answer and the ACK record commit in the same transaction.
+- A duplicate with identical content returns `DUPLICATE_MESSAGE` with the original `originalCode` and `success`. Reusing a requestId with different content is rejected.
+- The denominator for the A–D percentages and correct/incorrect is the number of valid answers; with no answers everything is 0. Unanswered = participants − answered.
+- The deadline is stored in the database; a 250 ms sweeper recovers after a restart. Both MANUAL and TIMER close a question when time runs out; MANUAL waits for the teacher to choose the next question. After an outage, expired questions are closed first, then TIMER continues with the full time for the new question.
+- The teacher can let students join mid-session; the participant total in the report uses the current/final number of participants.
 
-## Persistence, vận hành và cấu hình mạng
+## Persistence, operation and network settings
 
-PostgreSQL, EMQX data/log và cấu hình bootstrap dùng named volumes. `docker compose down` giữ dữ liệu; `docker compose down -v` **xóa dữ liệu**. Kiểm tra restart bằng `docker compose restart backend postgres emqx`, chờ healthy rồi mở lại lịch sử/session. Broker reconnect sẽ được backend publish lại retained state.
+PostgreSQL, the EMQX data/logs and the bootstrap configuration use named volumes. `docker compose down` keeps the data; `docker compose down -v` **deletes the data**. Check a restart with `docker compose restart backend postgres emqx`, wait until healthy, then reopen the history/session. When the broker reconnects, the backend republishes the retained state.
 
-Các port PostgreSQL, MQTT và EMQX Dashboard mặc định chỉ bind loopback. Frontend rootless bind `127.0.0.1:8080`; Apache hoặc socket proxy cung cấp cổng 80 để giáo viên mở trực tiếp bằng `http://localhost`. Nếu dùng qua mạng lớp học: đặt `FRONTEND_ORIGIN` theo đúng địa chỉ truy cập và cấu hình virtual host/proxy cho địa chỉ LAN; đổi simulator broker URL trong phần Kết nối hoặc đặt `VITE_MQTT_WS_URL` rồi rebuild. Nginx hỗ trợ `/mqtt` qua cùng host. HTTPS cần `wss://`, reverse proxy TLS và `COOKIE_SECURE=true`. Đặt `TRUST_PROXY=true` cho backend khi sau proxy tin cậy để rate limit theo IP người dùng; không trust proxy không kiểm soát.
+The PostgreSQL, MQTT and EMQX Dashboard ports bind to loopback by default. The rootless frontend binds `127.0.0.1:8080`; Apache or a socket proxy provides port 80 so teachers can open `http://localhost` directly. To use it over the classroom network: set `FRONTEND_ORIGIN` to the exact access address and configure a virtual host/proxy for the LAN address; change the simulator broker URL in the connection panel or set `VITE_MQTT_WS_URL` and rebuild. Nginx supports `/mqtt` on the same host. HTTPS needs `wss://`, a TLS reverse proxy and `COOKIE_SECURE=true`. Set `TRUST_PROXY=true` for the backend when it is behind a trusted proxy so rate limiting is per user IP; never trust a proxy you do not control.
 
-Authentication luôn bật, không có chế độ anonymous. `broker-config` sinh file bootstrap/ACL từ `.env`; EMQX đọc bootstrap khi authenticator được tạo lần đầu. **Đổi password trong `.env` không tự đổi tài khoản đã tồn tại trong volume EMQX**: cập nhật qua Dashboard/API và đồng bộ credential ứng dụng. Không xóa volume để xoay khóa nếu cần giữ dữ liệu.
+Authentication is always on; there is no anonymous mode. `broker-config` generates the bootstrap/ACL files from `.env`; EMQX reads the bootstrap when the authenticator is first created. **Changing a password in `.env` does not change an account that already exists in the EMQX volume**: update it through the Dashboard/API and keep the application credentials in sync. Do not delete the volume to rotate keys if you need to keep the data.
 
-Tài khoản simulator dùng chung chỉ phục vụ môi trường phát triển; clientId có thể tự chọn, không chứng minh danh tính thiết bị. Cho triển khai thật, cấp credential riêng với `pnpm provision --deviceId=device-001` và `MQTT_DEVICE_PASSWORD` riêng, sau đó đặt `MQTT_SIMULATOR_ENABLED=false`, chạy lại broker-config/restart EMQX, và xóa tài khoản simulator cũ qua Dashboard. ACL thiết bị thật gắn topic với `${username}`, nên credential của device-001 không thể gửi topic device-002. Xem [giao thức và provisioning](docs/mqtt-protocol.md).
+The shared simulator account is for development only; the clientId can be chosen freely and does not prove a device's identity. For a real deployment issue dedicated credentials with `pnpm provision --deviceId=device-001` and a separate `MQTT_DEVICE_PASSWORD`, then set `MQTT_SIMULATOR_ENABLED=false`, re-run broker-config/restart EMQX, and delete the old simulator account through the Dashboard. The ACL of real devices ties the topics to `${username}`, so the credentials of device-001 cannot publish to device-002's topics. See the [protocol and provisioning](docs/mqtt-protocol.md).
 
-## Firmware ESP32 tham chiếu
+## Reference ESP32 firmware
 
-`apps/firmware` bổ sung đường chạy cho thiết bị thật theo các bài BLE, Wi-Fi và MQTT: provision bằng BLE GATT đã mã hóa, kết nối Wi-Fi STA, publish/subscribe MQTT QoS 1, ACK/retry/idempotency, lưu pending/sequence trong NVS, quét keypad có debounce và điều khiển hai module LED bốn số dùng 74HC595. Xem [pinout, build, flash và provision](apps/firmware/README.md), cùng [sơ đồ breadboard và BOM](docs/hardware/breadboard-wiring.md). Logic thuần C chạy được trên host bằng `pnpm test:firmware`.
+`apps/firmware` adds the path for a real device following the BLE, Wi-Fi and MQTT lessons: provisioning over encrypted BLE GATT, Wi-Fi STA connection, MQTT QoS 1 publish/subscribe, ACK/retry/idempotency, pending state and sequence kept in NVS, debounced keypad scanning and control of two four-digit LED modules driven by 74HC595s. See [pinout, build, flash and provisioning](apps/firmware/README.md) and the [breadboard wiring and BOM](docs/hardware/breadboard-wiring.md). The pure C logic can run on the host with `pnpm test:firmware`.
 
-Tài liệu [đối chiếu bài giảng](docs/course-alignment.md) mô tả cách các lớp IoT, BLE, Wi-Fi, web server, database và MQTT ánh xạ vào mã nguồn.
+The [course alignment](docs/course-alignment.md) document describes how the IoT, BLE, Wi-Fi, web server, database and MQTT topics map onto the source code.
 
-## Phạm vi MVP và giới hạn đã biết
+## MVP scope and known limitations
 
-- Có firmware ESP-IDF và pinout tham chiếu, nhưng chưa build/flash và đo điện trên board thật trong môi trường này. Cần xác minh loại LED common cathode/anode, điện trở, thứ tự digit, GPIO và nhiễu keypad trên phần cứng trước khi sử dụng trong lớp.
-- Triển khai **một backend instance**. Rate limit nằm trong RAM, realtime dùng Socket.IO adapter mặc định. Muốn scale nhiều instance cần Redis adapter, limiter phân tán, cơ chế phát sự kiện/outbox và thiết kế subscriber consumer rõ ràng.
-- Lưu đáp án cuối, metadata/hash và ACK từng message; chưa lưu toàn bộ lịch sử nội dung các lần thay đáp án. Không có bảng xếp hạng, chia sẻ màn hình công khai hoặc reset mật khẩu qua email trong phạm vi này.
-- Câu hỏi chỉ gồm chữ: hình ảnh trong Word/PDF không được nhập, công thức Word chỉ lấy phần chữ. Mỗi câu có đúng bốn phương án A–D (phương án E/F bị bỏ qua khi nhập). Câu nhiều đáp án chấm đúng-tất-cả, chưa có điểm thành phần.
-- Thiết bị theo một câu chung trên màn chiếu, nên mã đề đổi thứ tự câu/đáp án theo từng lớp hoặc buổi chứ không khác nhau giữa các sinh viên trong cùng phòng; đề Word dùng cho thi giấy.
-- AI qua Gemini/Claude cần Internet và khóa API; Gemini miễn phí có hạn mức theo phút/ngày. Ollama không giới hạn nhưng phụ thuộc phần cứng, mô hình nhỏ cho câu hỏi kém chính xác hơn. Nội dung AI đề xuất phải được giáo viên kiểm tra trước khi duyệt. Tác vụ AI đang chạy bị đánh dấu thất bại nếu backend khởi động lại.
-- Access token tồn tại tối đa 15 phút sau logout; refresh token bị thu hồi, token chỉ ở memory của web. Production cần HTTPS/WSS, credential riêng, xoay secret, backup, giới hạn mạng phù hợp. Không đưa `.env` thật vào git.
-- Khi mất kết nối, UI hiển thị trạng thái và tải lại snapshot khi reconnect. Không chấp nhận đáp án offline gửi lại sau deadline.
-- Docker Compose đã được xác minh với PostgreSQL, EMQX, backend và frontend; xem [kết quả kiểm thử](docs/testing.md).
+- ESP-IDF firmware and a reference pinout exist, but they have not been built, flashed or measured electrically on a real board in this environment. Before classroom use, verify on the hardware whether the LEDs are common cathode or anode, the resistors, the digit order, the GPIOs and keypad noise.
+- Only **one backend instance** is deployed. The rate limit lives in RAM and realtime uses the default Socket.IO adapter. Scaling to several instances needs a Redis adapter, a distributed limiter, an event publishing/outbox mechanism and a clear subscriber-consumer design.
+- It stores the final answer, the metadata/hash and the ACK of each message; it does not store the full history of every change of answer. There is no leaderboard, public screen sharing or password reset by email in this scope.
+- Questions are text only: images in Word/PDF are not imported and Word formulas keep only their text. Every question has exactly four options A–D (options E/F are ignored on import). A multiple-answer question is graded all-or-nothing, with no partial credit.
+- Devices follow one shared question on the presentation screen, so paper codes change the order of questions/options per class or session, not between students in the same room; the Word paper is for paper-based exams.
+- AI through Gemini/Claude needs Internet and an API key; free Gemini has per-minute/day quotas. Ollama is unlimited but depends on the hardware, and a small model writes less accurate questions. Content proposed by the AI must be checked by the teacher before approval. A running AI task is marked failed if the backend restarts.
+- An access token stays valid for up to 15 minutes after logout; refresh tokens are revoked and the token lives only in the web app's memory. Production needs HTTPS/WSS, dedicated credentials, secret rotation, backups and suitable network restrictions. Never commit a real `.env` to git.
+- When the connection is lost, the UI shows the state and reloads the snapshot on reconnect. An answer sent late from offline after the deadline is not accepted.
+- Docker Compose was verified with PostgreSQL, EMQX, the backend and the frontend; see the [test results](docs/testing.md).
 
-Chi tiết: [Kiến trúc](docs/architecture.md) · [Đối chiếu bài giảng](docs/course-alignment.md) · [MQTT v1](docs/mqtt-protocol.md) · [REST/Socket.IO](docs/api.md).
+Details: [Architecture](docs/architecture.md) · [Course alignment](docs/course-alignment.md) · [MQTT v1](docs/mqtt-protocol.md) · [REST/Socket.IO](docs/api.md).

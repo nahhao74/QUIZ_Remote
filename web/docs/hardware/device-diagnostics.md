@@ -1,20 +1,20 @@
-# Chẩn đoán từng thiết bị ClassPulse
+# Diagnosing a single ClassPulse device
 
-Mở [`ClassPulseDeviceDiagnostics.ino`](../../apps/firmware/ClassPulseDeviceDiagnostics/ClassPulseDeviceDiagnostics.ino) trong Arduino IDE, chọn **ESP32 Dev Module**, build và upload. Sketch không cần thư viện ngoài. Mở Serial Monitor ở 115200 baud và đặt line ending tùy ý.
+Open [`ClassPulseDeviceDiagnostics.ino`](../../apps/firmware/ClassPulseDeviceDiagnostics/ClassPulseDeviceDiagnostics.ino) in the Arduino IDE, choose **ESP32 Dev Module**, build and upload. The sketch needs no external library. Open the Serial Monitor at 115200 baud with any line ending.
 
-| Lệnh | Kiểm tra |
+| Command | What it checks |
 |---|---|
-| `l` | LED xanh chớp ba lần |
-| `1` | Chỉ display 1 hiện `1234` |
-| `2` | Chỉ display 2 hiện `5678` |
-| `b` | Hai display hiện đồng thời |
-| `o` | Tắt hai display |
-| `k` | Bật/tắt log hàng và cột keypad |
-| `w` | Kết nối hoặc in trạng thái Wi-Fi |
-| `t` | Kiểm tra tắt display sau 5 giây |
-| `p` | In pinout đang dùng |
-| `m` | In lại menu |
+| `l` | The green LED blinks three times |
+| `1` | Only display 1 shows `1234` |
+| `2` | Only display 2 shows `5678` |
+| `b` | Both displays show at the same time |
+| `o` | Turns both displays off |
+| `k` | Toggles the keypad row and column log |
+| `w` | Connects or prints the Wi-Fi state |
+| `t` | Tests the display turning off after 5 seconds |
+| `p` | Prints the pinout in use |
+| `m` | Prints the menu again |
 
-Nếu display 1 không chạy nhưng display 2 chạy, kiểm tra DIO1/GPIO21. Nếu display 2 không chạy, kiểm tra DIO2/GPIO22. Nếu cả hai không chạy, kiểm tra VCC/GND và hai đường dùng chung SCLK/GPIO18, RCLK/GPIO19.
+If display 1 does not work but display 2 does, check DIO1/GPIO21. If display 2 does not work, check DIO2/GPIO22. If neither works, check VCC/GND and the two shared lines SCLK/GPIO18 and RCLK/GPIO19.
 
-Keypad in cả ký tự, số hàng/cột và GPIO. Nếu ký tự sai nhưng hàng/cột vẫn xuất hiện, đổi thứ tự dây keypad sau khi rút USB.
+The keypad prints the character, the row/column numbers and the GPIO. If the character is wrong but the row/column still appear, change the order of the keypad wires after unplugging USB.

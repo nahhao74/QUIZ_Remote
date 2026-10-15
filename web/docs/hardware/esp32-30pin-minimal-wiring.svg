@@ -5,8 +5,8 @@
     </style>
   </defs>
   <rect width="1600" height="1180" fill="#f4f7fb"/>
-  <text x="55" y="58" class="title">ESP32 DevKit V1 30 chân — 2×LED 4 số 74HC595</text>
-  <text x="55" y="92" class="sub">Nhìn từ trên xuống · cổng Micro-USB ở phía dưới · tên chân theo chữ in trên board</text>
+  <text x="55" y="58" class="title">ESP32 DevKit V1 30-pin — 2× 4-digit 74HC595 LED</text>
+  <text x="55" y="92" class="sub">Top view · Micro-USB port at the bottom · pin names as printed on the board</text>
 
   <rect x="590" y="130" width="420" height="880" rx="30" class="board"/>
   <rect x="675" y="235" width="250" height="370" rx="8" class="module"/>
@@ -63,19 +63,19 @@
 
   <rect x="1165" y="135" width="370" height="175" rx="16" class="display"/>
   <circle cx="1195" cy="165" r="20" class="badge"/><text x="1189" y="172" class="num">2</text>
-  <text x="1230" y="172" class="head">Display 74HC595 số 1</text>
+  <text x="1230" y="172" class="head">74HC595 display 1</text>
   <text x="1190" y="210" class="text">VCC→3V3 · GND→GND</text>
   <text x="1190" y="245" class="text">SCLK→18 · RCLK→19</text>
-  <text x="1190" y="280" class="text">DIO→GPIO21 · hiện 1234</text>
+  <text x="1190" y="280" class="text">DIO→GPIO21 · shows 1234</text>
   <path d="M1165 245 H1095 V480 H975" class="wire wdisp"/>
   <path d="M1165 280 H1080 V380 H975" class="wire wdisp"/>
 
   <rect x="1165" y="355" width="370" height="175" rx="16" class="display"/>
   <circle cx="1195" cy="385" r="20" class="badge"/><text x="1189" y="392" class="num">3</text>
-  <text x="1230" y="392" class="head">Display 74HC595 số 2</text>
+  <text x="1230" y="392" class="head">74HC595 display 2</text>
   <text x="1190" y="430" class="text">VCC→3V3 · GND→GND</text>
   <text x="1190" y="465" class="text">SCLK→18 · RCLK→19</text>
-  <text x="1190" y="500" class="text">DIO→GPIO22 · hiện 5678</text>
+  <text x="1190" y="500" class="text">DIO→GPIO22 · shows 5678</text>
   <path d="M1165 465 H1095 V480 H975" class="wire wdisp"/>
   <path d="M1165 500 H1060 V230 H975" class="wire wdisp"/>
 
@@ -90,19 +90,19 @@
   <text x="245" y="475" class="text">C2 → GPIO14</text>
   <text x="245" y="510" class="text">C3 → GPIO23</text>
   <text x="245" y="545" class="text">C4 → GPIO33</text>
-  <text x="80" y="600" class="text">Chỉ nhấn một phím/lần.</text>
-  <text x="80" y="640" class="text">Nếu sai phím: rút USB, đổi</text>
-  <text x="80" y="670" class="text">thứ tự dây hàng/cột keypad.</text>
+  <text x="80" y="600" class="text">Press one key at a time.</text>
+  <text x="80" y="640" class="text">Wrong key: unplug USB and</text>
+  <text x="80" y="670" class="text">swap the keypad row/column wires.</text>
   <path d="M445 480 H520 V530 H625" class="wire wkey"/>
   <path d="M445 520 H485 V180 H975" class="wire wkey"/>
 
   <rect x="1110" y="760" width="425" height="170" rx="16" class="power"/>
-  <text x="1140" y="800" class="head">Nguồn trong lần thử</text>
-  <text x="1140" y="842" class="text">USB cấp ESP32</text>
-  <text x="1140" y="877" class="text">Display VCC chỉ nối 3V3</text>
-  <text x="1140" y="912" class="text">Tất cả GND nối chung</text>
+  <text x="1140" y="800" class="head">Power during the test</text>
+  <text x="1140" y="842" class="text">USB powers the ESP32</text>
+  <text x="1140" y="877" class="text">Display VCC only to 3V3</text>
+  <text x="1140" y="912" class="text">All GND connected together</text>
   <path d="M1110 875 H1040 V880 H975" class="wire wpwr"/>
 
   <rect x="75" y="1080" width="1450" height="65" rx="14" class="warn"/>
-  <text x="105" y="1121" class="head">Rút USB trước khi đổi dây. SCLK và RCLK đều phải nối; không được bỏ một trong hai chân.</text>
+  <text x="105" y="1121" class="head">Unplug USB before changing wires. SCLK and RCLK must both be connected; never leave either pin out.</text>
 </svg>

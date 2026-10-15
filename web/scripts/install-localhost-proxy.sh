@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [[ ${EUID} -ne 0 ]]; then
-  echo "Hãy chạy lệnh này bằng sudo: sudo ./scripts/install-localhost-proxy.sh" >&2
+  echo "Run this command with sudo: sudo ./scripts/install-localhost-proxy.sh" >&2
   exit 1
 fi
 
@@ -16,7 +16,7 @@ if systemctl is-active --quiet apache2; then
   a2ensite classpulse >/dev/null
   apache2ctl configtest
   systemctl reload apache2
-  echo "ClassPulse đã sẵn sàng tại http://localhost qua Apache"
+  echo "ClassPulse is ready at http://localhost through Apache"
   exit 0
 fi
 
@@ -28,4 +28,4 @@ systemctl daemon-reload
 systemctl enable --now classpulse-http.socket
 systemctl --no-pager --lines=0 status classpulse-http.socket
 
-echo "ClassPulse đã sẵn sàng tại http://localhost"
+echo "ClassPulse is ready at http://localhost"

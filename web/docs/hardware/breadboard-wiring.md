@@ -1,16 +1,16 @@
-# ClassPulse pad — sơ đồ breadboard ESP32 30 pin
+# ClassPulse pad — 30-pin ESP32 breadboard wiring
 
-![Pinout ESP32 và dây nối](esp32-30pin-minimal-wiring.svg)
+![ESP32 pinout and wiring](esp32-30pin-minimal-wiring.svg)
 
-Ảnh cận cảnh xác nhận hai module có năm chân `VCC`, `GND`, `DIO`, `SCLK`, `RCLK`, tức loại LED bốn số dùng 74HC595. `SCLK` đưa từng bit vào thanh ghi dịch; `RCLK` chốt dữ liệu ra các ngõ LED. Cả hai tín hiệu đều bắt buộc.
+The close-up photo confirms that both modules have five pins `VCC`, `GND`, `DIO`, `SCLK`, `RCLK`, which is the four-digit LED type driven by a 74HC595. `SCLK` shifts each bit into the shift register; `RCLK` latches the data onto the LED outputs. Both signals are required.
 
-Nếu hiện chỉ có một điện trở 330 Ω và một LED xanh, dùng [cấu hình thử tối giản](minimal-test.md). Firmware đang bật sẵn `CP_MINIMAL_BREADBOARD_TEST=1`.
+If you only have one 330 Ω resistor and one green LED, use the [minimal test setup](minimal-test.md). The firmware has `CP_MINIMAL_BREADBOARD_TEST=1` enabled by default.
 
-## Kết nối display
+## Display connections
 
-Hai module dùng chung clock và latch nhưng có data riêng:
+The two modules share the clock and latch but have their own data lines:
 
-| Chân module | Display 1 | Display 2 |
+| Module pin | Display 1 | Display 2 |
 |---|---|---|
 | VCC | 3V3 | 3V3 |
 | GND | GND | GND |
@@ -18,48 +18,48 @@ Hai module dùng chung clock và latch nhưng có data riêng:
 | RCLK | GPIO19 | GPIO19 |
 | DIO | GPIO21 | GPIO22 |
 
-Nối theo chữ in trên PCB, không dựa vào vị trí chân trong ảnh. Với breadboard hiện tại, cấp display bằng 3V3 để mức logic ESP32 phù hợp trực tiếp. Nếu bản PCB cần cấp display bằng 5 V để sáng hơn, dùng bộ đệm 74AHCT125 cho bốn đường `SCLK`, `RCLK`, `DIO1`, `DIO2`.
+Wire by the labels printed on the PCB, not by the pin positions in the photo. On the current breadboard, power the displays from 3V3 so the ESP32 logic levels match directly. If a PCB version needs the displays at 5 V for more brightness, use a 74AHCT125 buffer on the four lines `SCLK`, `RCLK`, `DIO1`, `DIO2`.
 
-## Keypad 4×4
+## 4×4 keypad
 
-Profile thử dùng pull-down nội:
+The test profile uses the internal pull-downs:
 
 | Keypad | ESP32 |
 |---|---|
 | R1–R4 | GPIO25, GPIO26, GPIO27, GPIO32 |
 | C1–C4 | GPIO13, GPIO14, GPIO23, GPIO33 |
 
-Khi chuyển `CP_MINIMAL_BREADBOARD_TEST` thành `0`, cột dùng GPIO33/34/35/39 và mỗi cột cần điện trở 47 kΩ xuống GND; mỗi hàng có điện trở nối tiếp 1 kΩ. Thứ tự tám dây keypad clone không bảo đảm giống nhau, nên đo thông mạch hoặc thử từng phím rồi sửa thứ tự dây.
+When `CP_MINIMAL_BREADBOARD_TEST` is changed to `0`, the columns use GPIO33/34/35/39 and each column needs a 47 kΩ resistor to GND; each row has a 1 kΩ series resistor. The order of the eight wires of a clone keypad is not guaranteed to be the same, so check continuity or try each key and then fix the wire order.
 
-## LED trạng thái
+## Status LED
 
-Trong lần thử hiện tại:
+In the current test:
 
 ```text
-GPIO17 → 330 Ω → anode LED xanh
-cathode LED → GND
+GPIO17 → 330 Ω → green LED anode
+LED cathode → GND
 ```
 
-Sketch thử dùng xung xanh 250 ms cho Wi-Fi online và một giây cho offline. Khi có đủ linh kiện, mạch hoàn chỉnh dùng GPIO16 cho LED đỏ và GPIO17 cho LED xanh, mỗi LED nối tiếp 1 kΩ.
+The test sketch uses a 250 ms green pulse for Wi-Fi online and one second for offline. With all the parts available, the complete circuit uses GPIO16 for the red LED and GPIO17 for the green LED, each with a 1 kΩ series resistor.
 
-## Chế độ hoạt động
+## Operating modes
 
-- Hai module được quét multiplex liên tục; vì vậy code refresh display khoảng mỗi 1 ms.
-- Nhấn keypad cập nhật nội dung và LED trạng thái.
-- Sau 5 giây không nhấn, chuỗi 74HC595 được chốt về trạng thái tắt display.
-- Firmware hệ thống dùng Wi-Fi modem-sleep và automatic light-sleep để giữ kết nối MQTT.
+- The two modules are multiplexed continuously; so the code refreshes the display about every 1 ms.
+- A keypad press updates the content and the status LED.
+- After 5 seconds without a press, the 74HC595 chain is latched to the display-off state.
+- The system firmware uses Wi-Fi modem-sleep and automatic light-sleep to keep the MQTT connection.
 
-## Trình tự thử
+## Test sequence
 
-1. Chỉ cắm ESP32 và LED xanh; nạp sketch, kiểm tra LED chớp lúc boot.
-2. Rút USB, cắm display 1 và kiểm tra `1234`.
-3. Rút USB, thay bằng display 2 và kiểm tra `5678`.
-4. Rút USB, cắm đồng thời hai display với SCLK/RCLK dùng chung.
-5. Rút USB, cắm keypad sau cùng và chỉ nhấn một phím mỗi lần.
+1. Connect only the ESP32 and the green LED; flash the sketch and check that the LED blinks at boot.
+2. Unplug USB, connect display 1 and check `1234`.
+3. Unplug USB, swap in display 2 and check `5678`.
+4. Unplug USB, connect both displays together with SCLK/RCLK shared.
+5. Unplug USB, connect the keypad last and press only one key at a time.
 
-## Tài liệu tham khảo
+## References
 
-- [Thư viện và pin mapping module 74HC595](https://github.com/DIYables/DIYables_4Digit7Segment_74HC595)
+- [Library and pin mapping of the 74HC595 module](https://github.com/DIYables/DIYables_4Digit7Segment_74HC595)
 - [SN74HC595 datasheet](https://www.ti.com/lit/ds/symlink/sn74hc595.pdf)
 - [ESP32 sleep modes](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/sleep_modes.html)
 - [ESP32 hardware design guidelines](https://docs.espressif.com/projects/esp-hardware-design-guidelines/en/latest/esp32/schematic-checklist.html)
