@@ -1,58 +1,67 @@
-# Thiết kế phần cứng Quiz Remote
+# Quiz Remote: Hardware
 
-Thư mục này chứa toàn bộ thiết kế mạch: schematic, mạch in, tài liệu tính toán, BOM và các script dựng và xuất file. Chi tiết từng khối nằm trong [tài liệu thiết kế](docs/tai-lieu-thiet-ke-phan-cung.md).
+This folder holds everything about the circuit: the design process, the KiCad projects, schematic and board images, the bill of materials, build scripts and simulations. The design document in `docs/` (in Vietnamese) gives the calculations for each block, the ESP32 pin map, the parts list with purchase links and the test results.
 
-## Cấu trúc
+## Contents
 
-| Đường dẫn | Nội dung |
+| Path | Contents |
 |---|---|
-| `docs/tai-lieu-thiet-ke-phan-cung.md` | Nguyên lý, tính toán từng khối, bảng chân ESP32, BOM, kết quả kiểm tra, việc cần làm trước khi đặt mạch |
-| `schematic/` | Sơ đồ nguyên lý từng sheet, PDF và PNG. `quiz_remote` là sheet gốc; M1–M6 là các khối |
-| `compact/` | Board chính 52 × 90 mm, 2 lớp: dự án KiCad, Gerber, file đi dây, ảnh mặt trước và sau, `bom.csv` |
-| `single-layer/` | Phiên bản 1 lớp 75 × 133,75 mm. Đồng chỉ ở mặt sau; các đường trên mặt trước là dây nối hàn tay |
-| `tools/` | Script dựng mạch in, xuất tài liệu, mô phỏng nguồn và chương trình mẫu |
+| `docs/tai-lieu-thiet-ke-phan-cung.md` | Design document: operating principle, calculations per block, ESP32 pin map, BOM with purchase links, test results |
+| `schematic/` | Schematic per sheet, as PDF and PNG. `quiz_remote` is the root sheet; M1 to M6 are the functional blocks |
+| `compact/` | 52 × 90 mm board: KiCad project, Gerber files, routing files, board images in `exports/`, `bom.csv` |
+| `tools/` | Board build scripts, documentation export, power simulation, Wokwi firmware sample |
 
-## Quy trình thiết kế
+## Design process
 
-Làm theo thứ tự. Mỗi bước có một điều kiện phải đạt trước khi sang bước sau.
+Work through the steps in order. Each step ends with a condition that must hold before the next one starts.
 
-1. **Yêu cầu và chia khối.** Xác định việc mạch phải làm và dòng mục tiêu khi không dùng. Chia mạch thành các khối (M1–M6) và vẽ mỗi khối thành một sheet KiCad. *Điều kiện:* mỗi khối có một nhiệm vụ rõ ràng và nối với khối khác qua tên net cụ thể.
-2. **Tính toán và chọn linh kiện.** Tính điện áp, dòng, công suất và thời gian cho từng khối; ghi công thức và kết quả vào tài liệu. Chọn linh kiện có sẵn ở shop trong nước và ghi vào BOM. *Điều kiện:* mỗi giá trị trên schematic có dòng tính toán hoặc lý do trong tài liệu.
-3. **Vẽ schematic và kiểm tra ERC.** Gán ký hiệu, footprint và giá trị. *Điều kiện:* ERC không còn lỗi.
-4. **Mô phỏng khi cần.** Mạch đánh thức và tự giữ nguồn được mô phỏng bằng ngspice (`tools/sim_wake_hold.py`). Logic quét phím và hiển thị được mô phỏng trên Wokwi. Mô phỏng chỉ kiểm tra hành vi, không thay cho phép đo.
-5. **Dựng mạch in.** Đặt linh kiện và đi dây trong KiCad, hoặc dựng bằng script (xem bên dưới). *Điều kiện:* DRC có đối chiếu schematic không còn vi phạm và không còn dây chưa nối.
-6. **Xuất file.** Gerber, BOM và ảnh. Cập nhật tài liệu và README khi thiết kế thay đổi.
-7. **Đặt mạch, lắp và đo.** Làm theo mục 8 của tài liệu: đo module ESP32 thật, dòng nghỉ, điện áp `3V3_SW`, gợn sóng khi phát sóng và thời gian tắt.
+1. **Requirements and blocks.** Define what the circuit must do and the target current when idle. Split the circuit into blocks (M1 to M6) and draw each block as one KiCad sheet. *Done when* each block has one job and connects to the others through named nets.
+2. **Calculations and parts.** Calculate voltage, current, power and timing for each block, and record the formulas and results in the design document. Choose parts that are sold locally and list them in the BOM. *Done when* every value on the schematic has a calculation or a stated reason in the document.
+3. **Schematic and ERC.** Assign symbols, footprints and values, then run ERC. *Done when* ERC reports no errors.
+4. **Simulation, when needed.** The wake and self-hold circuit is simulated in ngspice. Key scanning and the display are simulated on Wokwi. A simulation checks behaviour only; it does not replace measurement.
+5. **Layout.** Place parts and route the board in KiCad, or rebuild it with the scripts below. *Done when* DRC with schematic parity reports no violations and no unconnected items.
+6. **Export.** Generate the Gerber files, BOM and images. Update the design document and this README when the design changes.
+7. **Assemble and measure.** Measure the assembled board: idle current, 3V3 ripple and droop during radio bursts, shutdown timing and battery life.
 
-## Làm việc với KiCad
+## Working with the KiCad project
 
-Mở `compact/quiz_remote.kicad_pro` bằng KiCad 10. Các lệnh dưới đây chạy từ thư mục gốc của repo.
+Open `compact/quiz_remote.kicad_pro` in KiCad 10. The commands below run from the repository root.
 
 ```sh
 kicad-cli sch erc hardware/compact/quiz_remote.kicad_sch
 kicad-cli pcb drc --schematic-parity hardware/compact/quiz_remote.kicad_pcb
 ```
 
-`compact/` và `single-layer/` mỗi thư mục có một bản sao schematic riêng. Khi sửa schematic, sửa ở một bản rồi chép các file sheet sang bản còn lại trước khi dựng lại mạch in.
-
-Dựng lại mạch compact từ schematic:
+The schematic sheets in `compact/` are the source of the board. The board can be rebuilt from them with the placement and routing scripts. Routing uses Freerouting 2.4.1, which is not included in the repository:
 
 ```sh
 python3 hardware/tools/build_compact_pcb.py place
-FREEROUTING_DIR=/duong/dan/freerouting python3 hardware/tools/build_compact_pcb.py route
+FREEROUTING_DIR=/path/to/freerouting python3 hardware/tools/build_compact_pcb.py route
 python3 hardware/tools/build_compact_pcb.py finish
 ```
 
-Bước `route` cần Freerouting 2.4.1 (file `freerouting-*.jar` và thư mục `jre25/`), không kèm trong repo. Freerouting cho kết quả khác nhau giữa các lần chạy, nên chạy lại DRC sau khi dựng.
+The scripts rewrite the board files in `compact/`, so commit your changes first. Freerouting does not give the same result on every run, so a rebuild can leave a few connections open. Check with DRC and run `route` again if needed.
 
-## Xuất tài liệu
+## Simulation and firmware
+
+Power simulation (needs ngspice, which comes with KiCad):
+
+```sh
+python3 hardware/tools/sim_wake_hold.py
+```
+
+Firmware sample on [wokwi.com](https://wokwi.com): create an ESP32 project, paste `hardware/tools/wokwi_sim/wokwi_sim.ino` into `sketch.ino` and `hardware/tools/wokwi_sim/diagram.json` into `diagram.json`, then start the simulation. Before flashing the real board, change `#define WOKWI 1` to `#define WOKWI 0`.
+
+## Exporting documentation
 
 ```sh
 python3 hardware/tools/export_docs.py
 ```
 
-Lệnh tạo PDF và PNG cho từng sheet trong `schematic/`, ảnh mặt trước và sau của hai board trong `exports/`, và `compact/bom.csv`. Cần `kicad-cli`, `pdftoppm` (poppler-utils) và Pillow.
+The script writes:
 
-## Trạng thái
+- `schematic/`: one PDF and one PNG per sheet.
+- `compact/exports/`: front and back board views, as PDF and PNG.
+- `compact/bom.csv`: the bill of materials, grouped by value and footprint.
 
-Board compact đã qua ERC, DRC và mô phỏng nguồn. Chưa lắp và chưa đo trên mạch thật; các mục đo còn mở nằm ở mục 8 của tài liệu.
+It needs `kicad-cli`, `pdftoppm` and `pdftotext` (from poppler-utils), and the Pillow package for Python.

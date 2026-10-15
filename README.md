@@ -1,87 +1,48 @@
 # Quiz Remote
 
-Bộ bấm trả lời cầm tay dùng ESP32: 16 phím, hai LED 7 thanh, chạy bằng 2 pin AAA. Khi không bấm, toàn bộ mạch bị cắt nguồn; chính phím bấm đánh thức mạch, ESP32 tự giữ nguồn trong lúc làm việc rồi tự tắt.
+A battery-powered handheld answer buzzer built around an ESP32. It has sixteen keys, two 7-segment digits and an ESP-NOW radio, and runs on two AAA cells. The board draws no power while idle: a key press wakes it, the ESP32 holds its own power while it works, and then it switches the whole board off.
 
-| Mặt trước | Mặt sau |
+| Front | Back |
 |---|---|
-| ![Mặt trước](hardware/compact/exports/pcb-front.png) | ![Mặt sau](hardware/compact/exports/pcb-back.png) |
+| ![Front of the board](hardware/compact/exports/pcb-front.png) | ![Back of the board](hardware/compact/exports/pcb-back.png) |
 
-Toàn bộ thiết kế phần cứng nằm trong thư mục [`hardware/`](hardware/README.md), gồm quy trình thiết kế, sơ đồ nguyên lý, mạch in, BOM và các script.
+## Overview
 
-## Trạng thái
-
-Thiết kế đã qua kiểm tra trên máy tính, **chưa lắp và đo trên mạch thật**.
-
-| Kiểm tra | Kết quả |
+| | |
 |---|---|
-| ERC schematic | 0 lỗi |
-| DRC mạch in, có đối chiếu schematic | 0 vi phạm, 0 dây chưa nối |
-| Mô phỏng mạch đánh thức và tự giữ nguồn | Đạt với pin 3,0 V và 2,4 V |
+| Microcontroller | ESP32 NodeMCU LuaNode32, 30 pins, plugged into sockets so it can be removed for programming |
+| Input | 4 × 4 matrix of 6 × 6 mm tactile switches (16 keys) |
+| Display | Two 0.36" red 7-segment digits, common anode, driven by one 74HC595 shift register |
+| Power | Two AAA cells in an external holder on connector JBAT; MT3608 boost converter to 3.37 V |
+| Board | 52 × 90 mm, two layers, four M2 mounting holes |
+| Parts cost | About 315,000 VND at prices of 2026-10-03, excluding AAA cells and shipping |
 
-## Thông số chính
+## How it works
 
-- Mạch in 52 × 90 mm, 2 lớp; phím và LED ở mặt trước, linh kiện còn lại ở mặt sau.
-- Module ESP32 NodeMCU LuaNode32 30 chân, cắm trên đế, rút ra để nạp chương trình.
-- Nguồn 3,37 V từ mạch tăng áp MT3608; hộp pin 2×AAA nằm ngoài board, nối dây vào đầu JBAT.
-- Linh kiện mua được tại ThegioiIC và LinhKienX, tổng khoảng 315.000 đ.
-- Có thêm phiên bản 1 lớp 75 × 133,75 mm (`hardware/single-layer/`), cùng schematic.
+1. **Idle.** No part of the circuit has power, including the ESP32, so the current drawn is only leakage.
+2. **Key press.** A passive wake network pulls the gate of the power switch low. The switch turns on, the boost converter starts and the 3.37 V rail appears.
+3. **Self-hold.** The ESP32 starts and drives `PWR_HOLD` (GPIO13) high, which keeps the power switch on after the key is released.
+4. **Shutdown.** When the ESP32 releases `PWR_HOLD`, the power switch turns off and the board goes dark.
 
-## Cấu trúc thư mục
+## Status
 
-| Đường dẫn | Nội dung |
+The design has been checked on a computer. It has not been assembled or measured yet.
+
+| Check | Result |
 |---|---|
-| `hardware/README.md` | Quy trình thiết kế và cách làm việc với các file |
-| `hardware/docs/` | Tài liệu thiết kế: nguyên lý, tính toán, bảng chân, BOM kèm link mua, kết quả kiểm tra |
-| `hardware/schematic/` | Sơ đồ nguyên lý từng sheet, PDF và PNG |
-| `hardware/compact/` | Dự án KiCad của board chính, Gerber, file đi dây, ảnh mặt trước và sau, `bom.csv` |
-| `hardware/single-layer/` | Dự án KiCad của phiên bản 1 lớp |
-| `hardware/tools/` | Script dựng mạch in, xuất tài liệu, mô phỏng nguồn và chương trình mẫu Wokwi |
+| Schematic ERC | 0 errors |
+| PCB DRC, with schematic parity | 0 violations, 0 unconnected items |
+| Wake and self-hold simulation | Passes at 3.0 V and 2.4 V. The model has no leakage current, so it says nothing about idle current |
 
-## Cách dùng
+Still to measure: idle current, 3.3 V ripple and droop during radio bursts, boost behaviour at low battery voltage, and battery life.
 
-Cần KiCad 10. Các lệnh chạy từ thư mục gốc của repo.
+## Repository
 
-**Xem và sửa thiết kế:** mở `hardware/compact/quiz_remote.kicad_pro` bằng KiCad.
+| Path | Contents |
+|---|---|
+| [`hardware/`](hardware/README.md) | The circuit: design process, KiCad project, schematic and board images, BOM, build scripts and simulations |
+| [`hardware/docs/tai-lieu-thiet-ke-phan-cung.md`](hardware/docs/tai-lieu-thiet-ke-phan-cung.md) | Design document in Vietnamese: principles, calculations per block, ESP32 pin map, BOM with purchase links, test results |
 
-**Kiểm tra lại:**
+## License
 
-```sh
-kicad-cli sch erc hardware/compact/quiz_remote.kicad_sch
-kicad-cli pcb drc --schematic-parity hardware/compact/quiz_remote.kicad_pcb
-```
-
-**Mô phỏng phần nguồn** (dùng thư viện ngspice đi kèm KiCad):
-
-```sh
-python3 hardware/tools/sim_wake_hold.py
-```
-
-**Mô phỏng chương trình:** tạo dự án ESP32 trên [wokwi.com](https://wokwi.com), dán `hardware/tools/wokwi_sim/wokwi_sim.ino` vào `sketch.ino` và `hardware/tools/wokwi_sim/diagram.json` vào `diagram.json`, rồi bấm chạy. Khi nạp vào board thật, đổi `#define WOKWI 1` thành `0`.
-
-**Dựng lại mạch in từ schematic:**
-
-```sh
-python3 hardware/tools/build_compact_pcb.py place
-FREEROUTING_DIR=/duong/dan/freerouting python3 hardware/tools/build_compact_pcb.py route
-python3 hardware/tools/build_compact_pcb.py finish
-```
-
-Bước `route` cần Freerouting 2.4.1 (file `freerouting-*.jar` và thư mục `jre25/`), không kèm trong repo. Freerouting cho kết quả khác nhau giữa các lần chạy, nên chạy lại DRC sau khi dựng.
-
-**Xuất lại ảnh, sơ đồ và BOM:**
-
-```sh
-python3 hardware/tools/export_docs.py
-```
-
-## Trước khi đặt mạch
-
-- Đo module ESP32 thật: board giả định hai hàng chân cách nhau 25,4 mm.
-- Board có 4 lỗ bắt vít M2 (2,2 mm); chưa có chữ in tên linh kiện.
-- Dòng nghỉ, gợn nguồn khi phát sóng và thời lượng pin chưa được đo.
-
-Chi tiết ở mục 8 của [tài liệu thiết kế](hardware/docs/tai-lieu-thiet-ke-phan-cung.md).
-
-## Giấy phép
-
-MIT, xem [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).

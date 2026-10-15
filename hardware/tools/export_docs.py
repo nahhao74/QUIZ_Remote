@@ -3,7 +3,6 @@
 Writes:
   schematic/<sheet>.pdf and .png   one file per schematic sheet (root sheet is quiz_remote)
   compact/exports/pcb-front|back   board views, PDF and PNG
-  single-layer/exports/pcb-front|back
   compact/bom.csv                  bill of materials grouped by value and footprint
 
 Run from the repository root:  python3 hardware/tools/export_docs.py
@@ -16,7 +15,6 @@ from PIL import Image, ImageChops
 
 HW = Path(__file__).resolve().parents[1]
 COMPACT = HW / 'compact'
-SINGLE = HW / 'single-layer'
 SCHEMATIC = COMPACT / 'quiz_remote.kicad_sch'
 # (page in the schematic PDF, file name). Page order follows the sheet hierarchy.
 SHEETS = [(1, 'quiz_remote'), (2, 'M4_ESP32_SOCKET'), (3, 'M5_KEYPAD_4X4'), (4, 'M1_BATTERY_MAIN_SWITCH'),
@@ -77,6 +75,5 @@ def export_bom():
 if __name__ == '__main__':
     export_schematic()
     export_board(COMPACT)
-    export_board(SINGLE)
     export_bom()
     print('done')

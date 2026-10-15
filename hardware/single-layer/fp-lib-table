@@ -1,4 +1,0 @@
-(fp_lib_table
- (version 7)
- (lib (name "quiz_remote_physical") (type "KiCad") (uri "${KIPRJMOD}/quiz_remote_physical.pretty") (options "") (descr "M9 manufacturer-drawing footprints"))
-)
