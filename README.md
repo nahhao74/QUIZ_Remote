@@ -25,12 +25,12 @@ Every student holds a small pad with 16 keys and two 7-segment digits. The teach
 
 | | |
 |---|---|
-| 🔋 **Zero standby current** | A key press switches the board on; the ESP32 holds its own power and cuts it completely when done |
-| 📡 **Reliable delivery** | MQTT QoS 1, an application-level ACK, retries and server-side de-duplication — no answer is lost or counted twice |
-| 📶 **Network setup without reflashing** | Hold `0` for 3 s and the pad opens a captive-portal Wi-Fi setup page for any phone |
-| 📊 **Live results** | Answer counts and the A–D distribution update in real time; correct answers stay hidden until the question closes |
-| 🧮 **Item analysis** | Difficulty, discrimination index, distractor effectiveness and KR-20 reliability after every session |
-| 📥 **Question import** | Word, Excel, PDF and TXT, with optional AI help to write and review questions |
+| **Zero standby current** | A key press switches the board on; the ESP32 holds its own power and cuts it completely when done |
+| **Reliable delivery** | MQTT QoS 1, an application-level ACK, retries and server-side de-duplication — no answer is lost or counted twice |
+| **Network setup without reflashing** | Hold `0` for 3 s and the pad opens a captive-portal Wi-Fi setup page for any phone |
+| **Live results** | Answer counts and the A–D distribution update in real time; correct answers stay hidden until the question closes |
+| **Item analysis** | Difficulty, discrimination index, distractor effectiveness and KR-20 reliability after every session |
+| **Question import** | Word, Excel, PDF and TXT, with optional AI help to write and review questions |
 
 ## The device
 
